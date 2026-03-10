@@ -11,4 +11,4 @@ description: Technology choices and constraints.
 - **Tests**: pytest
 - **Package manager**: uv
 - **Linter**: Ruff (lint + format)
-- **Type checker**: mypy
+- **Type checker**: pyright
