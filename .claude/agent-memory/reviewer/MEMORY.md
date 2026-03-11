@@ -36,6 +36,16 @@
 - `_poll_and_deliver` claims entries (`status="delivering"`) inside a transaction, then processes them outside. If the worker crashes after the transaction commits, entries are stuck in `"delivering"` forever — no recovery path. Need a `stuck_delivering_timeout` sweep.
 - `_record_attempt` and `_handle_delivery_failure` each open separate sessions and count `DeliveryAttempt` rows. Between the two calls the count can diverge if another worker races (not guarded by advisory lock or FOR UPDATE).
 
+## Patterns Confirmed in M5 Demo UI (f4dd6ee)
+
+- `Chat` in `App.tsx` is always passed `patientId` (the hardcoded external ID from `DEMO_PATIENTS`), never `effectivePatientId`. `load_patient_context` does `session.get(Patient, pid)` against the external ID used as a UUID PK — if no row exists it auto-provisions. The seeded patient from `/seed-patient` is a **different row** with a different internal UUID. Result: Chat conversations land on the auto-provisioned record; `ObservabilitySidebar` and `DemoControls` (which use `effectivePatientId`) land on the seeded record. The two are never the same row unless seeding is skipped.
+- `triggerFollowup` in `DemoControls.tsx` calls `/v1/demo/trigger-followup/${patientId}` where `patientId` is `effectivePatientId` (correct). But `fetchJobs` in its `useCallback` dep array does NOT include `fetchJobs` — React will warn about stale closure; however `fetchJobs` is stable (depends only on `patientId` which is a prop) so this is not an actual bug in practice.
+- `showStatus` in `DemoControls` sets a `setTimeout` to clear the message after 3s. If the component unmounts before the timeout fires, `setStatusMessage("")` is called on an unmounted component — React 18 no longer throws here, but it's still a potential stale state update. No `clearTimeout` in a cleanup. Demo-only code; low severity.
+- `seed_patient` in `demo.py` returns `phase="pending"` hardcoded at line 138-142, ignoring the actual `patient.phase` from the DB (which might differ if the patient already existed and was returned early at line 101-105 with the real phase). The `phase` field in the response is misleading on re-seed of an existing patient, but the early-return path at line 100-105 correctly reads `patient.phase`.
+- `mountedRef` pattern in `ObservabilitySidebar`: `mountedRef.current = true` is set in the `useEffect` body (not initialization). Because `useRef(true)` initializes to `true`, the first render is fine. On patientId change, cleanup sets it `false`, then the new effect sets it `true` again before `fetchState` runs — correct.
+- No SQL injection risk in `demo.py` — all queries use SQLAlchemy parameterized ORM expressions. UUID parsing is done via `uuid.UUID()` before use, which is a correct guard.
+- The `environment == "dev"` gate in `main.py` is correct. The import is deferred inside the `if` block, so the module is not even loaded in non-dev environments.
+
 ## Known Issues Found in M2
 
 - `FakeConsentService.reason` field in `check()` uses `self.allowed` (a property on the fake) — this is fine, not a bug.

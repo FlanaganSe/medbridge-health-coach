@@ -111,6 +111,28 @@
 - lock key: `hash(patient_id) & 0x7FFFFFFF` (positive bigint; advisory lock keys are bigint)
 - `CoachContext` keeps `db_session_factory` as factory (Callable) — nodes open short sessions; no session spans nodes
 
+## CI/CD State (researched 2026-03-11)
+- Full research: `.claude/plans/research-cicd.md`
+- Three workflows: `ci.yml` (push/PR), `eval.yml` (push main + dispatch), `deploy.yml` (tags + dispatch)
+- Tool: `astral-sh/setup-uv@v7` with `enable-cache: true` — reads `requires-python` for Python version automatically
+- Install command: `uv sync --frozen` (always frozen lockfile)
+- Lint: `uv run ruff check .` + `uv run ruff format --check .`
+- Typecheck: `uv run pyright .`
+- Unit tests: `uv run pytest tests/unit/ tests/safety/ tests/contract/ -v --tb=short` — no DB needed, SQLite only
+- Integration tests: `uv run pytest tests/integration/ -v --tb=short -m integration` — BUT `-m integration` is a BUG: no test file applies `@pytest.mark.integration`, so this runs 0 tests
+- Eval tests: `uv run pytest tests/evals/ -v --tb=short` with `ANTHROPIC_API_KEY` + `DEEPEVAL_TELEMETRY_OPT_OUT=1`
+- Required secrets: only `ANTHROPIC_API_KEY` (eval job); `GITHUB_TOKEN` is automatic for ghcr.io push
+- All `tests/integration/` tests use MemorySaver + mocks — they work on SQLite; no test actually needs PostgreSQL today
+- `addopts = "--ignore=tests/evals"` in pyproject.toml keeps evals out of default `pytest` run
+- Python: 3.12 only (no matrix), `python:3.12-slim` in Dockerfile
+
+## SQLite vs PostgreSQL Demo Compatibility (researched 2026-03-11)
+- `sqlalchemy.dialects.postgresql` is always importable (it's in SQLAlchemy core) — `ImportError` will never fire as a dialect guard. Use `settings.is_sqlite` or `settings.is_postgres` to branch instead.
+- `webhooks.py` `_insert_on_conflict_ignore()` uses `try/except ImportError` to detect SQLite — this is broken; the fallback path is unreachable. PostgreSQL insert dialect runs on SQLite and crashes.
+- SKIP LOCKED crashes SQLite — confirmed in production code at `scheduler.py:111` and `delivery_worker.py:126`.
+- `MemorySaver` is the SQLite checkpointer — state is lost on process restart.
+- `locking.py` correctly guards advisory lock behind `if "sqlite" in str(engine.url)`.
+
 ## Scheduling / Outbox / Observability (researched 2026-03-10)
 - Detailed findings in `.claude/plans/research-scheduling-observability.md`
 - SQLAlchemy 2.0 async SKIP LOCKED: `.with_for_update(skip_locked=True)` — identical in sync/async
