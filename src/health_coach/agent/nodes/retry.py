@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage
 
 from health_coach.agent.context import get_coach_context
 from health_coach.agent.prompts.system import get_system_prompt
@@ -54,13 +54,13 @@ async def retry_generation(
     coach_model = ctx.model_gateway.get_chat_model("coach")
     system_prompt = get_system_prompt(phase)
 
-    # Build messages: system prompt + existing messages + augmentation
+    # Build messages: system prompt (augmented with safety constraints) + existing messages
+    augmented_prompt = f"{system_prompt}\n\n{RETRY_AUGMENTATION}"
     messages = list(state.get("messages", []))
-    messages.append(HumanMessage(content=RETRY_AUGMENTATION))
 
     try:
         response = await coach_model.ainvoke(
-            [{"role": "system", "content": system_prompt}, *messages]
+            [{"role": "system", "content": augmented_prompt}, *messages]
         )
         content = str(response.content)
     except Exception:
@@ -71,8 +71,5 @@ async def retry_generation(
     return {
         "safety_retry_count": retry_count,
         "outbound_message": content if content else None,
-        "messages": [
-            HumanMessage(content=RETRY_AUGMENTATION),
-            AIMessage(content=content),
-        ],
+        "messages": [AIMessage(content=content)],
     }

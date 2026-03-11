@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -69,7 +68,7 @@ async def pending_node(
                 "message_type": "patient_message",
                 "priority": 0,
                 "channel": "default",
-                "payload": {"message_ref_id": str(uuid.uuid4())},
+                "payload": {"message": WELCOME_MESSAGE},
             }
         ],
         "audit_events": [],

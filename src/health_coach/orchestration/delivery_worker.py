@@ -135,7 +135,7 @@ class DeliveryWorker:
             await session.execute(
                 update(OutboxEntry)
                 .where(OutboxEntry.id.in_(entry_ids))
-                .values(status="delivering")
+                .values(status="delivering", updated_at=func.now())
             )
 
         for entry in entries:

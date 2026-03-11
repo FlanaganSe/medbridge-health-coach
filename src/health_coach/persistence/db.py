@@ -48,6 +48,7 @@ async def create_langgraph_pool(settings: Settings) -> AsyncConnectionPool | Non
     if not settings.is_postgres:
         return None
 
+    from psycopg.rows import dict_row
     from psycopg_pool import AsyncConnectionPool
 
     raw_url = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
@@ -59,6 +60,7 @@ async def create_langgraph_pool(settings: Settings) -> AsyncConnectionPool | Non
         kwargs={
             "autocommit": True,
             "prepare_threshold": 0,
+            "row_factory": dict_row,
         },
     )
 

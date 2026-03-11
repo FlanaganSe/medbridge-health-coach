@@ -195,7 +195,7 @@ class SchedulerWorker:
     async def _handle_job_failure(self, job: ScheduledJob) -> None:
         """Increment attempts and mark as failed or dead."""
         new_attempts = job.attempts + 1
-        new_status = "dead" if new_attempts >= job.max_attempts else "failed"
+        new_status = "dead" if new_attempts >= job.max_attempts else "pending"
 
         async with self._session_factory() as session, session.begin():
             await session.execute(
