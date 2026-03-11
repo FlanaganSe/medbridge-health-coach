@@ -38,7 +38,6 @@ def test_pending_effects_full() -> None:
         "safety_decisions": [],
         "outbox_entries": [],
         "audit_events": [],
-        "cancel_pending_jobs": False,
     }
     assert effects["phase_event"] == "onboarding_initiated"
     assert effects["goal"] == {"goal_text": "test"}

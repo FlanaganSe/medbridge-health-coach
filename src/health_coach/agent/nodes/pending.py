@@ -41,7 +41,7 @@ async def pending_node(
 
     # Build onboarding timeout job
     timeout_at = now + timedelta(hours=ctx.coach_config.onboarding_timeout_hours)
-    timeout_key = f"{patient_id}:onboarding_timeout:{now.date().isoformat()}"
+    timeout_key = f"{patient_id}:onboarding_timeout"
 
     effects = {
         "goal": None,
@@ -73,7 +73,6 @@ async def pending_node(
             }
         ],
         "audit_events": [],
-        "cancel_pending_jobs": False,
     }
 
     return {

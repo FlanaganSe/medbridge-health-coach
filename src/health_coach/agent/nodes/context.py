@@ -15,6 +15,7 @@ from health_coach.domain.phase_machine import transition
 from health_coach.domain.phases import PatientPhase
 from health_coach.persistence.models import (
     AuditEvent,
+    ClinicianAlert,
     OutboxEntry,
     PatientGoal,
     SafetyDecisionRecord,
@@ -36,7 +37,6 @@ EMPTY_EFFECTS: PendingEffects = {
     "safety_decisions": [],
     "outbox_entries": [],
     "audit_events": [],
-    "cancel_pending_jobs": False,
 }
 
 
@@ -168,6 +168,35 @@ async def save_patient_context(
                     source=str(sd.get("source", "classifier")),
                     confidence=sd.get("confidence"),  # type: ignore[arg-type]
                     reasoning=sd.get("reasoning"),  # type: ignore[arg-type]
+                )
+            )
+
+        # Write clinician alerts + outbox entries for delivery
+        for alert_data in effects.get("alerts", []):
+            idempotency_key = str(alert_data.get("idempotency_key", ""))
+            session.add(
+                ClinicianAlert(
+                    tenant_id=tenant_id,
+                    patient_id=pid,
+                    reason=str(alert_data.get("reason", "")),
+                    priority=str(alert_data.get("priority", "routine")),
+                    idempotency_key=idempotency_key,
+                )
+            )
+            # Alert delivery via outbox (clinician alerts skip consent re-check)
+            session.add(
+                OutboxEntry(
+                    tenant_id=tenant_id,
+                    patient_id=pid,
+                    delivery_key=idempotency_key,
+                    message_type="clinician_alert",
+                    priority=1 if alert_data.get("priority") == "urgent" else 0,
+                    channel="default",
+                    payload={
+                        "reason": str(alert_data.get("reason", "")),
+                        "priority": str(alert_data.get("priority", "routine")),
+                    },
+                    status="pending",
                 )
             )
 

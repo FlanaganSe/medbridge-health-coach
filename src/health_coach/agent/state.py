@@ -18,7 +18,6 @@ class PendingEffects(TypedDict, total=False):
     safety_decisions: list[dict[str, object]]
     outbox_entries: list[dict[str, object]]
     audit_events: list[dict[str, object]]
-    cancel_pending_jobs: bool
 
 
 class PatientState(TypedDict, total=False):
