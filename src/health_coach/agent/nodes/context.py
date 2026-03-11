@@ -52,16 +52,22 @@ async def load_patient_context(
     ctx = get_coach_context(config)
     patient_id = state["patient_id"]
 
+    pid = uuid.UUID(patient_id)
+    tenant_id = state["tenant_id"]
+
     async with ctx.session_factory() as session:
-        patient = await session.get(Patient, uuid.UUID(patient_id))
+        patient = await session.get(Patient, pid)
 
     if patient is None:
-        logger.warning("patient_not_found", patient_id=patient_id)
-        return {
-            "phase": PatientPhase.PENDING.value,
-            "unanswered_count": 0,
-            "pending_effects": dict(EMPTY_EFFECTS),
-        }
+        logger.info("patient_auto_provisioned", patient_id=patient_id)
+        async with ctx.session_factory() as session, session.begin():
+            patient = Patient(
+                id=pid,
+                tenant_id=tenant_id,
+                external_patient_id=patient_id,
+                phase=PatientPhase.PENDING.value,
+            )
+            session.add(patient)
 
     return {
         "phase": patient.phase,
@@ -144,7 +150,7 @@ async def save_patient_context(
                     raise
 
         # Apply unanswered count from state (agent nodes may increment)
-        if "unanswered_count" in state:
+        if state.get("unanswered_count") is not None:
             patient.unanswered_count = int(state["unanswered_count"])
 
         # Reset unanswered count and record response time on patient message

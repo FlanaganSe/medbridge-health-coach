@@ -93,7 +93,7 @@ async def chat(
 
 def _format_sse(data: dict[str, Any]) -> str:
     """Format a dict as an SSE event."""
-    return f"data: {json.dumps(data)}\n\n"
+    return f"data: {json.dumps(data, default=str)}\n\n"
 
 
 async def _error_event(message: str) -> AsyncGenerator[str, None]:

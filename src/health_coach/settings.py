@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # --- LLM Provider ---
     anthropic_api_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
-    default_model: str = "claude-sonnet-4-5-20250514"
+    default_model: str = "claude-sonnet-4-6"
     safety_classifier_model: str = "claude-haiku-4-5-20251001"
     max_tokens: int = 1024
     fallback_phi_approved: bool = False

@@ -54,19 +54,17 @@ class AnthropicModelGateway(ModelGateway):
         return primary
 
     def _build_fallback(self) -> BaseChatModel | None:
-        """Build fallback model — safe message unless PHI approved for OpenAI."""
-        if not self._settings.fallback_phi_approved:
-            # No BAA signed — fallback is a deterministic safe model
-            from langchain_core.language_models.fake_chat_models import (
-                FakeListChatModel,
-            )
+        """Build fallback model — only when a real LLM fallback is available.
 
-            return FakeListChatModel(
-                responses=[
-                    "I'm having trouble processing your request right now. "
-                    "Please reach out to your care team if you need immediate help."
-                ],
-            )
+        FakeListChatModel is not viable as a with_fallbacks() target because
+        it doesn't support bind_tools() or with_structured_output(), which
+        causes RunnableWithFallbacks to crash when propagating those calls.
+        When no PHI-approved fallback provider is configured, return None
+        and let the primary model's own error handling (retry, fail-escalate)
+        take over.
+        """
+        if not self._settings.fallback_phi_approved:
+            return None
 
         from langchain_openai import ChatOpenAI
 
