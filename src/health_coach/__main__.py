@@ -100,6 +100,10 @@ async def _run_worker() -> None:
     langgraph_pool = await create_langgraph_pool(settings)
     if langgraph_pool is not None:
         await langgraph_pool.open(wait=True)
+        # Ensure LangGraph checkpoint tables exist (idempotent)
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        await AsyncPostgresSaver(langgraph_pool).setup()  # type: ignore[arg-type]
 
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)

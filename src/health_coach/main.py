@@ -54,6 +54,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if langgraph_pool is not None:
         await langgraph_pool.open(wait=True)
+        # Ensure LangGraph checkpoint tables exist (idempotent)
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        await AsyncPostgresSaver(langgraph_pool).setup()  # type: ignore[arg-type]
         await logger.ainfo("langgraph_pool_opened")
 
     # Set up graph and context factory for API endpoints
