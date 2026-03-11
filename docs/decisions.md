@@ -71,3 +71,17 @@ Append-only log. Never edit past entries.
 **Context:** The M1–M7 implementation created significant duplication: 3 identical `ctx_factory` closures, 8 copy-pasted pending effects accumulation blocks across 4 node modules, hardcoded `MockNotificationChannel()`/`MockAlertChannel()` instantiation, and 4 identical mock session helpers in tests. The demo UI was unusable without manual curl commands.
 **Decision:** (1) Extract `create_coach_context()` factory to `context.py`, typed with `ContextFactory` alias. (2) Extract `accumulate_effect()`/`merge_effects()` to `agent/effects.py` as pure functions. (3) Add settings-driven `create_notification_channel()`/`create_alert_channel()` factories in `integrations/channels.py`. (4) Replace `BaseHTTPMiddleware` with pure ASGI middleware to fix SSE buffering. (5) Gate demo endpoints behind `settings.environment == "dev"`. (6) Wire `AsyncPostgresSaver` for PostgreSQL with `MemorySaver` fallback for SQLite.
 **Consequences:** Duplication eliminated. New nodes use `accumulate_effect()` instead of copy-pasting the get-or-default pattern. Channel behavior is configurable via `NOTIFICATION_CHANNEL`/`ALERT_CHANNEL` env vars. Demo endpoints are never exposed in production.
+
+### ADR-009: Same-Origin Demo UI Serving via StaticFiles Mount
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** The demo UI (Vite SPA in `demo-ui/`) only works through Vite's dev proxy. On Railway there is no Vite dev server. Serving the UI from a separate origin requires CORS configuration and complicates deployment. The UI has no client-side routing (no react-router).
+**Decision:** Bundle the Vite build output into the Docker image (`node:22-slim` build stage → `/app/static`). Mount via `StaticFiles(directory=..., html=True)` at `"/"` as the last route in `main.py`, gated behind `settings.environment == "dev"`. FastAPI routes registered before the mount take priority. Starlette uses `anyio` for async file I/O — `aiofiles` is not required since Starlette 0.21.0.
+**Consequences:** Same-origin serving eliminates CORS entirely. All relative API URLs in the UI work without proxy configuration. The mount only fires for paths not matched by any API route. If the UI ever adds client-side routing (react-router), the `StaticFiles` mount must be replaced with a `SpaStaticFiles` subclass that overrides `lookup_path` to fall back to `index.html`.
+
+### ADR-010: Dormant Node Phase Transition Gated on LLM Success
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** When a DORMANT patient sends a message, the node must generate a welcome-back response and transition DORMANT → RE_ENGAGING. If the LLM call fails and the phase transition still fires, the patient is silently moved to RE_ENGAGING with no reply — an unrecoverable state corruption.
+**Decision:** Accumulate `phase_event="patient_returned"` only after a successful `coach_model.ainvoke()`. On LLM failure, return `{"outbound_message": None}` with no effects — leaving the patient in DORMANT so the next attempt can succeed. Route through `safety_gate` via conditional edge `_dormant_route` when a message is generated, or directly to `save_patient_context` when not.
+**Consequences:** LLM failures in the dormant path are gracefully degraded rather than silently corrupting phase state. The patient remains DORMANT and can retry. This matches the fail-safe pattern in `reengagement_agent`, which also returns no effects on LLM failure.
