@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: health_coach
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: health_coach
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U health_coach"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  health-coach:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://health_coach:password@postgres:5432/health_coach
+      ENVIRONMENT: dev
+      LOG_FORMAT: console
+      APP_MODE: all
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

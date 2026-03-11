@@ -1,0 +1,21 @@
+{
+  "include": ["src/health_coach", "tests"],
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingTypeStubs": false,
+  "executionEnvironments": [
+    {
+      "root": "tests",
+      "extraPaths": ["src"],
+      "reportUnknownParameterType": false,
+      "reportUnknownMemberType": false,
+      "reportUnknownArgumentType": false,
+      "reportUnknownVariableType": false,
+      "reportMissingParameterType": false,
+      "reportMissingTypeArgument": false,
+      "reportUnusedImport": false
+    }
+  ]
+}
