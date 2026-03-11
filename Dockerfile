@@ -39,7 +39,7 @@ COPY --from=builder /app/alembic.ini /app/alembic.ini
 COPY --from=ui-builder /app/demo-ui/dist /app/static
 
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 
 USER appuser
 

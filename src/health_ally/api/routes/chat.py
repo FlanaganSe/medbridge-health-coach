@@ -28,7 +28,7 @@ router = APIRouter(prefix="/v1", tags=["chat"])
 class ChatRequest(BaseModel):
     """Chat request body."""
 
-    message: str = Field(min_length=1)
+    message: str = Field(min_length=1, max_length=4000)
 
 
 @router.post("/chat")

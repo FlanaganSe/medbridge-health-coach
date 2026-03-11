@@ -51,7 +51,7 @@ alembic check  # Verify no pending migrations
 docker run -e APP_MODE=api \
   -e DATABASE_URL=$DATABASE_URL \
   -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  -e ENVIRONMENT=production \
+  -e ENVIRONMENT=prod \
   -e LOG_FORMAT=json \
   -p 8000:8000 \
   ghcr.io/$REPO:v0.1.0
@@ -64,7 +64,7 @@ docker run -e APP_MODE=api \
 docker run -e APP_MODE=worker \
   -e DATABASE_URL=$DATABASE_URL \
   -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  -e ENVIRONMENT=production \
+  -e ENVIRONMENT=prod \
   -e LOG_FORMAT=json \
   ghcr.io/$REPO:v0.1.0
 ```
@@ -72,7 +72,7 @@ docker run -e APP_MODE=worker \
 ### 5. Verify Health
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/health/live
 # Expected: {"status": "ok"}
 ```
 
@@ -102,7 +102,7 @@ alembic downgrade <revision_id>
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for LLM calls |
-| `ENVIRONMENT` | Yes | `dev`, `staging`, or `production` |
+| `ENVIRONMENT` | Yes | `dev`, `staging`, or `prod` |
 | `APP_MODE` | No | `api`, `worker`, or `all` (default: `all`) |
 | `LOG_FORMAT` | No | `json` or `console` (default: `console`) |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO`, `WARNING` (default: `INFO`) |
@@ -126,7 +126,7 @@ alembic downgrade <revision_id>
 
 ### Health Checks
 
-- `GET /health` — basic liveness check
+- `GET /health/live` — basic liveness check
 - Monitor delivery worker poll frequency via `delivery_batch_processed` logs
 - Monitor scheduler via `scheduler_poll` logs
 

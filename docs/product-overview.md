@@ -567,7 +567,7 @@ System prompts are dynamically built based on context:
 |---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API key for LLM calls (coaching + safety classification) |
 | `DATABASE_URL` | PostgreSQL connection string (auto-normalizes `postgresql://` → `postgresql+psycopg://`) |
-| `ENVIRONMENT` | `dev`, `staging`, or `production` |
+| `ENVIRONMENT` | `dev`, `staging`, or `prod` |
 
 ### Required for staging/production
 

@@ -19,7 +19,6 @@ class Settings(BaseSettings):
 
     # --- Environment ---
     environment: Literal["dev", "staging", "prod"] = "dev"
-    debug: bool = False
 
     # --- Database ---
     database_url: str = "sqlite+aiosqlite:///./health_ally.db"
