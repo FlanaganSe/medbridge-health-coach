@@ -82,10 +82,14 @@ async def active_agent(
         response = await model_with_tools.ainvoke(
             [{"role": "system", "content": system_prompt}, *messages]
         )
-        content = str(response.content) if response.content else None
     except Exception:
         logger.exception("active_agent_error", patient_id=patient_id)
         return {"outbound_message": None}
+
+    # Tool calls → graph loops through tool_node; defer outbound_message
+    # to the final (no-tools) invocation so raw tool JSON isn't streamed.
+    has_tool_calls = bool(getattr(response, "tool_calls", None))
+    content = None if has_tool_calls else (str(response.content) if response.content else None)
 
     # Accumulate next follow-up job if scheduler-initiated
     result: dict[str, object] = {

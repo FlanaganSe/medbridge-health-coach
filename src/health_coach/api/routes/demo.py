@@ -71,6 +71,17 @@ class ResetPatientResponse(BaseModel):
     deleted_outbox: int
 
 
+class AuditEventItem(BaseModel):
+    id: str
+    event_type: str
+    outcome: str
+    created_at: str
+
+
+class AuditEventsResponse(BaseModel):
+    events: list[AuditEventItem]
+
+
 # --- Endpoints ---
 
 
@@ -279,5 +290,43 @@ async def get_scheduled_jobs(
                 created_at=j.created_at.isoformat(),
             )
             for j in jobs
+        ]
+    )
+
+
+@router.get(
+    "/audit-events/{patient_id}",
+    response_model=AuditEventsResponse,
+)
+async def get_audit_events(
+    request: Request,
+    patient_id: str,
+) -> AuditEventsResponse:
+    """List audit events for a patient, newest first (limit 100)."""
+    session_factory = request.app.state.session_factory
+
+    try:
+        pid = uuid.UUID(patient_id)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(AuditEvent)
+            .where(AuditEvent.patient_id == pid)
+            .order_by(AuditEvent.created_at.desc())
+            .limit(100)
+        )
+        events = result.scalars().all()
+
+    return AuditEventsResponse(
+        events=[
+            AuditEventItem(
+                id=str(e.id),
+                event_type=e.event_type,
+                outcome=e.outcome,
+                created_at=e.created_at.isoformat(),
+            )
+            for e in events
         ]
     )

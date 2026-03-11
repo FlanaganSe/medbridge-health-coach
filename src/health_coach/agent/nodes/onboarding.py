@@ -63,15 +63,18 @@ async def onboarding_agent(
             "outbound_message": None,
         }
 
-    content = str(response.content) if response.content else ""
+    has_tool_calls = bool(getattr(response, "tool_calls", None))
+    # Tool calls → graph loops through tool_node; defer outbound_message
+    # to the final (no-tools) invocation so raw tool JSON isn't streamed.
+    content = None if has_tool_calls else (str(response.content) if response.content else None)
 
     logger.info(
         "onboarding_agent_response",
         patient_id=patient_id,
-        has_tool_calls=bool(getattr(response, "tool_calls", None)),
+        has_tool_calls=has_tool_calls,
     )
 
     return {
         "messages": [response],
-        "outbound_message": content if content else None,
+        "outbound_message": content,
     }
