@@ -22,3 +22,45 @@ Append-only log. Never edit past entries.
 **Context:** `docs/requirements.md` §2 references "phase-specific subgraphs." With 5 phases, subgraphs add complexity (schema alignment, cross-graph debugging, checkpoint namespace management) without sufficient benefit. Different tools, prompts, and LLM bindings per phase are achievable via per-node configuration in a flat graph. Research §4.2 confirms single StateGraph is recommended at this scale.
 **Decision:** Use a single `StateGraph` with `add_conditional_edges` for phase routing. No subgraphs. Annotate `PatientState` fields with phase-ownership comments to make future extraction mechanical.
 **Consequences:** Simpler debugging and state management. Revisit subgraph extraction if: (1) HITL interrupts are required inside a phase, (2) more than 3 genuinely phase-private state fields accumulate in `PatientState` for a single phase, or (3) phases require independent development by separate teams. Phase count alone is not the trigger. **Migration cost:** subgraph extraction changes the LangGraph checkpoint namespace scheme (`""` → `"phase:UUID"`). In-flight patient threads must be drained or their checkpoint rows migrated — checkpoint blobs contain PHI, so post-production migration is a HIPAA change-management event. The practical migration window with minimal cost is before M4 (when persistent per-patient threads begin).
+
+### ADR-002: One Persistent LangGraph Thread Per Patient
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** Earlier research recommended new threads per check-in for isolation. However, conversational continuity across onboarding, follow-ups, and re-engagement requires the LLM to see prior conversation history. Loading context from the domain DB is lossy for conversational coherence.
+**Decision:** Use `thread_id = f"patient-{patient_id}"` for all interactions. A `manage_history` node trims and summarizes when message count exceeds a threshold, keeping the context window manageable.
+**Consequences:** Unbounded checkpoint growth mitigated by history management. Migration cost is high once production checkpoint rows with PHI exist — thread ID scheme changes require draining or migrating checkpoint blobs (HIPAA change-management event). Revisit if HITL interrupts are needed (LangGraph HITL model is thread-scoped).
+
+### ADR-003: Pending Effects Accumulation — save_patient_context is the Only Domain Writer
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** Graph nodes could write directly to the domain DB, but this creates dual-write divergence under retries. If a node writes and the graph later fails, the domain DB is left in an inconsistent state that cannot be replayed.
+**Decision:** Nodes accumulate side effects as "pending effects" in graph state. `save_patient_context` flushes all intents to the DB atomically. Two narrow exceptions: (1) `crisis_check` writes `ClinicianAlert` + `OutboxEntry` eagerly for durability, (2) `consent_gate` writes an audit event on denial since it exits before `save_patient_context` runs.
+**Consequences:** Replay safety — failed graphs leave the domain DB unchanged. New node authors must understand this boundary. Side-effecting tools return `Command(update={...})` since `InjectedState` is read-only for tools.
+
+### ADR-004: Consent Verification Re-checked at Delivery
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** A patient may revoke consent between message generation and delivery. Delivering a message after revocation is an unauthorized outreach — a compliance violation.
+**Decision:** The delivery worker re-checks consent for `patient_message` entries before transport. Clinician alerts skip consent re-check — they are internal clinical communications not subject to patient outreach consent.
+**Consequences:** The asymmetry (patient messages re-verified, clinician alerts not) is clinically load-bearing. Cancelled deliveries emit audit events. A developer must not "simplify" this into uniform consent checking — doing so would block crisis alerts when consent is revoked.
+
+### ADR-005: Safety Classifier Failure Modes Are Asymmetric
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** Two safety classifier invocations serve different purposes: the output safety gate prevents clinical advice from reaching patients; the crisis pre-check detects self-harm and triggers clinician alerts. Their failure modes must differ because the consequences of silent failure differ.
+**Decision:** Output safety gate fails closed — classifier errors produce `CLINICAL_BOUNDARY`, blocking the message. Crisis pre-check fails by escalating — classifier errors trigger a clinician alert rather than silently missing a potential crisis. Safety state uses a single `SafetyDecision` StrEnum (not multi-boolean) to eliminate ambiguous states.
+**Consequences:** False positives on output safety (blocked safe messages) are acceptable; false negatives on crisis (missed suicidal patient) are not. The asymmetry is intentional and must be preserved. Model choice (`claude-haiku-4-5-20251001`) balances latency and accuracy for both paths.
+
+### ADR-006: Patient-Scoped Advisory Lock on AUTOCOMMIT Connection
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** Concurrent graph invocations for the same patient (e.g., patient replies while a scheduled follow-up is in flight) can corrupt domain state (phase, unanswered_count). PostgreSQL advisory locks serialize access, but three independent traps exist: (1) `hash()` is salted per-process via `PYTHONHASHSEED`, (2) transaction-level locks release too early during LLM calls, (3) SQLAlchemy 2.x autobegin creates idle-in-transaction on the lock connection.
+**Decision:** Use `pg_advisory_lock` (session-level) acquired at call sites (chat endpoint, webhook handler, scheduler) — not inside graph nodes. Lock key derived from `hashlib.sha256` for cross-process determinism. Lock connection uses `isolation_level="AUTOCOMMIT"` to prevent autobegin.
+**Consequences:** Any call site that omits the lock can produce patient state corruption. The earlier incorrect design (transaction-level lock inside a node) is documented here so it is not repeated. SQLite dev environments skip locking (single-writer semantics sufficient).
+
+### ADR-007: PHI Scrubbing as Last Processor in structlog Chain
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** HIPAA requires that PHI not appear in application logs. Structured logging with structlog uses a processor chain where each processor can add or transform fields. If PHI scrubbing runs too early, later processors (e.g., `format_exc_info`) can re-introduce PHI from exception tracebacks.
+**Decision:** `scrub_phi_fields` runs as the last processor before the renderer in the structlog chain. It uses a field-name blocklist (`message_content`, `patient_name`, `ssn`, etc.) plus regex patterns (SSN, email) with recursive dict traversal.
+**Consequences:** The `_PHI_FIELD_NAMES` blocklist must grow with the domain model. Defense-in-depth — this is the last line, not the only line. The processor must always remain after `format_exc_info` in the chain.
