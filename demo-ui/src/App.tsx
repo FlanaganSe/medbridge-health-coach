@@ -62,7 +62,7 @@ export function App() {
           tenantId={tenantId}
           onPatientSeeded={handlePatientSeeded}
         />
-        <Chat patientId={patientId} tenantId={tenantId} />
+        <Chat patientId={effectivePatientId} tenantId={tenantId} />
       </div>
       <ObservabilitySidebar
         patientId={effectivePatientId}

@@ -123,17 +123,37 @@ async def test_deliver_message_empty_message_fails() -> None:
 
 
 @pytest.mark.asyncio
-async def test_consent_denied_skips_delivery() -> None:
-    """Patient messages are not delivered when consent is denied."""
+async def test_consent_denied_cancels_patient_message() -> None:
+    """Patient messages are cancelled when consent is denied at delivery."""
     notification = MockNotificationChannel()
-
-    # Consent denied
     consent = FakeConsentService(logged_in=False, consented=False)
 
-    # Verify the consent service correctly denies
-    result = await consent.check("p1", "t1")
-    assert result.allowed is False
+    entry = _make_outbox_entry(message_type="patient_message")
 
-    # Verify notification channel is not invoked when consent is denied
-    # (unit-level: we check that the consent gate works, not the full flow)
+    # Mock the session factory for _cancel_entry and _mark_entry calls
+    mock_session = AsyncMock()
+    mock_begin = AsyncMock()
+    mock_begin.__aenter__ = AsyncMock(return_value=None)
+    mock_begin.__aexit__ = AsyncMock(return_value=False)
+    mock_session.begin = MagicMock(return_value=mock_begin)
+
+    mock_sf = MagicMock()
+    mock_ctx = AsyncMock()
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_sf.return_value = mock_ctx
+
+    worker = DeliveryWorker(
+        session_factory=mock_sf,
+        consent_service=consent,
+        notification_channel=notification,
+        alert_channel=MockAlertChannel(),
+    )
+
+    await worker._deliver_single(entry)
+
+    # Notification should NOT have been called
     assert len(notification.sent) == 0
+
+    # _cancel_entry should have been called (session.execute with update)
+    assert mock_session.execute.called

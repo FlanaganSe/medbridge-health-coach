@@ -56,6 +56,17 @@ export function DemoControls({
     }
   }, [patientId, tenantId, onPatientSeeded, showStatus]);
 
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await fetch(`/v1/demo/scheduled-jobs/${patientId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setJobs(data.jobs ?? []);
+    } catch {
+      // Silently ignore fetch errors for jobs list
+    }
+  }, [patientId]);
+
   const triggerFollowup = useCallback(async () => {
     setTriggerStatus("loading");
     try {
@@ -71,7 +82,7 @@ export function DemoControls({
       setTriggerStatus("error");
       showStatus(`Trigger failed: ${err}`);
     }
-  }, [patientId, showStatus]);
+  }, [patientId, showStatus, fetchJobs]);
 
   const resetPatient = useCallback(async () => {
     setResetStatus("loading");
@@ -91,17 +102,6 @@ export function DemoControls({
       showStatus(`Reset failed: ${err}`);
     }
   }, [patientId, showStatus]);
-
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch(`/v1/demo/scheduled-jobs/${patientId}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setJobs(data.jobs ?? []);
-    } catch {
-      // Silently ignore fetch errors for jobs list
-    }
-  }, [patientId]);
 
   const statusColor: Record<string, string> = {
     pending: "#fbbf24",

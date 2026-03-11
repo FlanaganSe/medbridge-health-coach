@@ -12,20 +12,7 @@ from health_coach.agent.graph import compile_graph
 from health_coach.domain.consent import FakeConsentService
 from health_coach.domain.scheduling import CoachConfig
 from health_coach.integrations.model_gateway import FakeModelGateway
-
-
-def _make_mock_session():  # type: ignore[no-untyped-def]
-    """Create a mock session that returns None for patient lookups."""
-    from unittest.mock import AsyncMock, MagicMock
-
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=None)
-    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session.__aexit__ = AsyncMock(return_value=None)
-    mock_session.begin = MagicMock(return_value=AsyncMock())
-    mock_session.begin().__aenter__ = AsyncMock(return_value=None)
-    mock_session.begin().__aexit__ = AsyncMock(return_value=None)
-    return mock_session
+from tests.conftest import make_mock_session
 
 
 async def test_thread_persistence_across_invocations() -> None:
@@ -35,7 +22,7 @@ async def test_thread_persistence_across_invocations() -> None:
     checkpointer = MemorySaver()
     graph = compile_graph(checkpointer=checkpointer)
 
-    mock_session = _make_mock_session()
+    mock_session = make_mock_session()
     sf = MagicMock()
     sf.return_value = mock_session
 
@@ -94,7 +81,7 @@ async def test_different_threads_are_independent() -> None:
     checkpointer = MemorySaver()
     graph = compile_graph(checkpointer=checkpointer)
 
-    mock_session = _make_mock_session()
+    mock_session = make_mock_session()
     sf = MagicMock()
     sf.return_value = mock_session
 

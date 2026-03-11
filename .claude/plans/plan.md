@@ -270,7 +270,14 @@ Commit: "feat: demo UI — controls panel, SSE fix, observability improvements"
 
 ---
 
-### M6: Test Quality
+### M6: Test Quality ✅ COMPLETE
+
+- [x] Step 26 — State endpoint tests (7 tests)
+- [x] Step 27 — Consolidate mock session helper to conftest
+- [x] Step 28 — Fix misleading delivery worker test
+- [x] Step 29 — Fix conftest engine fixture with create_all
+- [x] Bonus — Fix datetime import (TC003 vs Pydantic), pyright extraPaths for tests, Chat identity split (🔴), fetchJobs dep array
+Commit: "test: state endpoint tests, consolidate mock session, fix delivery test"
 
 **Step 26:** Add tests for state endpoints
 - **File to create:** `tests/unit/test_state_endpoints.py`

@@ -1,8 +1,9 @@
-"""Shared test fixtures."""
+"""Shared test fixtures and helpers."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 
 from health_coach.main import create_app
 from health_coach.persistence.db import create_session_factory
+from health_coach.persistence.models import Base
 from health_coach.settings import Settings
 
 if TYPE_CHECKING:
@@ -23,6 +25,22 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
+
+
+def make_mock_session(mock_patient: object = None) -> AsyncMock:
+    """Create a mock async session for graph integration tests.
+
+    The mock supports async context manager, `.get()`, `.begin()`, `.add()`,
+    and `.execute()`. Use `mock_patient` to control what `.get()` returns.
+    """
+    mock_session = AsyncMock()
+    mock_session.get = AsyncMock(return_value=mock_patient)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+    mock_session.begin = MagicMock(return_value=AsyncMock())
+    mock_session.begin().__aenter__ = AsyncMock(return_value=None)
+    mock_session.begin().__aexit__ = AsyncMock(return_value=None)
+    return mock_session
 
 
 @pytest.fixture(scope="session")
@@ -41,6 +59,8 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
     )
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield eng
     await eng.dispose()
 

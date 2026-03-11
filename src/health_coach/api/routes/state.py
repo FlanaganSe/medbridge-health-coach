@@ -6,12 +6,9 @@ All endpoints are tenant-scoped via auth context.
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
+from datetime import datetime  # noqa: TC003 — Pydantic needs runtime access
 
 import structlog
-
-if TYPE_CHECKING:
-    from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
