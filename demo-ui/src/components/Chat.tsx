@@ -66,10 +66,12 @@ export function Chat({ patientId, tenantId }: ChatProps) {
               assistantContent += `[Error: ${data.message}]`;
               continue;
             }
-            // Extract outbound_message from save_patient_context updates
-            const ctx = data.save_patient_context;
-            if (ctx?.outbound_message) {
-              assistantContent += ctx.outbound_message;
+            // Extract outbound_message from any node's state update
+            for (const nodeData of Object.values(data)) {
+              const node = nodeData as Record<string, unknown>;
+              if (node?.outbound_message && typeof node.outbound_message === "string") {
+                assistantContent += node.outbound_message;
+              }
             }
           } catch {
             // Skip unparseable lines

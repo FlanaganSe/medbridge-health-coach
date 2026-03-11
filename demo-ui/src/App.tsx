@@ -3,8 +3,8 @@ import { Chat } from "./components/Chat";
 import { ObservabilitySidebar } from "./components/ObservabilitySidebar";
 
 const DEMO_PATIENTS = [
-  { id: "patient-1", name: "Demo Patient 1" },
-  { id: "patient-2", name: "Demo Patient 2" },
+  { id: "00000000-0000-0000-0000-000000000001", name: "Demo Patient 1" },
+  { id: "00000000-0000-0000-0000-000000000002", name: "Demo Patient 2" },
 ];
 
 export function App() {
