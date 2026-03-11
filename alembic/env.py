@@ -18,8 +18,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models so autogenerate can detect them
-# Will be populated in M2 when ORM models are created
-target_metadata = None
+from health_coach.persistence.models import Base  # noqa: E402
+
+target_metadata = Base.metadata
 
 
 def get_url() -> str:

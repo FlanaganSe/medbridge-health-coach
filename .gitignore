@@ -48,6 +48,9 @@ htmlcov/
 .env.*
 !.env.example
 
+# SQLite databases
+*.db
+
 # IDE
 .idea/
 .vscode/
