@@ -1,0 +1,147 @@
+import type {
+  AlertItem,
+  GoalItem,
+  Phase,
+  ResetPatientResponse,
+  SafetyDecisionItem,
+  ScheduledJobItem,
+  SeedPatientResponse,
+  TriggerFollowupResponse,
+} from "./types";
+
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text);
+  }
+  return res.json() as Promise<T>;
+}
+
+function authHeaders(patientId: string, tenantId: string): HeadersInit {
+  return {
+    "X-Patient-ID": patientId,
+    "X-Tenant-ID": tenantId,
+  };
+}
+
+// --- Demo Endpoints ---
+
+export function seedPatient(
+  tenantId: string,
+  externalPatientId: string,
+): Promise<SeedPatientResponse> {
+  return request("/v1/demo/seed-patient", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      external_patient_id: externalPatientId,
+    }),
+  });
+}
+
+export function triggerFollowup(
+  patientId: string,
+): Promise<TriggerFollowupResponse> {
+  return request(`/v1/demo/trigger-followup/${patientId}`, {
+    method: "POST",
+  });
+}
+
+export function resetPatient(
+  patientId: string,
+): Promise<ResetPatientResponse> {
+  return request(`/v1/demo/reset-patient/${patientId}`, {
+    method: "POST",
+  });
+}
+
+export async function fetchScheduledJobs(
+  patientId: string,
+): Promise<ScheduledJobItem[]> {
+  const r = await request<{ jobs: ScheduledJobItem[] }>(
+    `/v1/demo/scheduled-jobs/${patientId}`,
+  );
+  return r.jobs;
+}
+
+// --- State Endpoints ---
+
+export async function fetchPhase(
+  patientId: string,
+  tenantId: string,
+): Promise<Phase> {
+  const r = await request<{ patient_id: string; phase: Phase }>(
+    `/v1/patients/${patientId}/phase`,
+    { headers: authHeaders(patientId, tenantId) },
+  );
+  return r.phase;
+}
+
+export async function fetchGoals(
+  patientId: string,
+  tenantId: string,
+): Promise<GoalItem[]> {
+  const r = await request<{ patient_id: string; goals: GoalItem[] }>(
+    `/v1/patients/${patientId}/goals`,
+    { headers: authHeaders(patientId, tenantId) },
+  );
+  return r.goals;
+}
+
+export async function fetchAlerts(
+  patientId: string,
+  tenantId: string,
+): Promise<AlertItem[]> {
+  const r = await request<{ patient_id: string; alerts: AlertItem[] }>(
+    `/v1/patients/${patientId}/alerts`,
+    { headers: authHeaders(patientId, tenantId) },
+  );
+  return r.alerts;
+}
+
+export async function fetchSafetyDecisions(
+  patientId: string,
+  tenantId: string,
+): Promise<SafetyDecisionItem[]> {
+  const r = await request<{
+    patient_id: string;
+    decisions: SafetyDecisionItem[];
+  }>(`/v1/patients/${patientId}/safety-decisions`, {
+    headers: authHeaders(patientId, tenantId),
+  });
+  return r.decisions;
+}
+
+// --- Chat (returns raw Response for SSE streaming) ---
+
+export async function sendChatMessage(
+  patientId: string,
+  tenantId: string,
+  message: string,
+): Promise<Response> {
+  const res = await fetch("/v1/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(patientId, tenantId),
+    },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text);
+  }
+  return res;
+}

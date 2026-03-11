@@ -1,74 +1,67 @@
-import { useState, useCallback } from "react";
-import { Chat } from "./components/Chat";
-import { DemoControls } from "./components/DemoControls";
-import { ObservabilitySidebar } from "./components/ObservabilitySidebar";
+import { useCallback, useState } from "react";
+import { usePatientState } from "./hooks/usePatientState";
+import { ChatPanel } from "./components/ChatPanel";
+import { DemoControlBar } from "./components/DemoControlBar";
+import { ObservabilityPanel } from "./components/ObservabilityPanel";
+import { TopBar } from "./components/TopBar";
 
 const DEMO_PATIENTS = [
   { id: "00000000-0000-0000-0000-000000000001", name: "Demo Patient 1" },
   { id: "00000000-0000-0000-0000-000000000002", name: "Demo Patient 2" },
 ];
 
-export function App() {
-  const [patientId, setPatientId] = useState(DEMO_PATIENTS[0].id);
-  const tenantId = "demo-tenant";
+const TENANT_ID = "demo-tenant";
 
-  // Track the internal DB UUID (returned from seed-patient)
+export function App() {
+  const [externalPatientId, setExternalPatientId] = useState(
+    DEMO_PATIENTS[0].id,
+  );
   const [internalId, setInternalId] = useState<string | null>(null);
+
+  const effectivePatientId = internalId ?? externalPatientId;
+
+  const { state, loadState, lastUpdated, refresh } = usePatientState(
+    effectivePatientId,
+    TENANT_ID,
+  );
+
+  const handlePatientChange = useCallback((id: string) => {
+    setExternalPatientId(id);
+    setInternalId(null);
+  }, []);
 
   const handlePatientSeeded = useCallback((id: string) => {
     setInternalId(id);
   }, []);
 
-  // Use internal ID for demo API calls if available, external ID otherwise
-  const effectivePatientId = internalId ?? patientId;
-
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "system-ui" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header
-          style={{
-            padding: "12px 16px",
-            borderBottom: "1px solid #e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: 18 }}>Health Coach Demo</h1>
-          <select
-            value={patientId}
-            onChange={(e) => {
-              setPatientId(e.target.value);
-              setInternalId(null);
-            }}
-            style={{ padding: "4px 8px" }}
-          >
-            {DEMO_PATIENTS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          {internalId && (
-            <span
-              style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}
-            >
-              DB: {internalId.slice(0, 8)}...
-            </span>
-          )}
-        </header>
-        <DemoControls
-          patientId={effectivePatientId}
-          externalPatientId={patientId}
-          tenantId={tenantId}
-          onPatientSeeded={handlePatientSeeded}
-        />
-        <Chat patientId={effectivePatientId} tenantId={tenantId} />
-      </div>
-      <ObservabilitySidebar
-        patientId={effectivePatientId}
-        tenantId={tenantId}
+    <div className="flex h-screen flex-col bg-bg-page">
+      <TopBar
+        patients={DEMO_PATIENTS}
+        selectedPatientId={externalPatientId}
+        internalId={internalId}
+        onPatientChange={handlePatientChange}
       />
+      <DemoControlBar
+        patientId={effectivePatientId}
+        externalPatientId={externalPatientId}
+        tenantId={TENANT_ID}
+        onPatientSeeded={handlePatientSeeded}
+        onStateChanged={refresh}
+      />
+      <div className="flex min-h-0 flex-1">
+        <ChatPanel
+          patientId={effectivePatientId}
+          tenantId={TENANT_ID}
+          phase={state.phase}
+          onStreamComplete={refresh}
+        />
+        <ObservabilityPanel
+          state={state}
+          loadState={loadState}
+          lastUpdated={lastUpdated}
+        />
+      </div>
     </div>
   );
 }

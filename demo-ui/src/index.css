@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-brand-red: #E42313;
+
+  /* Text */
+  --color-text-primary: #0D0D0D;
+  --color-text-secondary: #7A7A7A;
+  --color-text-muted: #B0B0B0;
+
+  /* Backgrounds */
+  --color-bg-page: #F5F5F5;
+  --color-bg-subtle: #F5F5F5;
+  --color-bg-white: #FFFFFF;
+  --color-bg-faint: #FAFAFA;
+
+  /* Borders */
+  --color-border: #E8E8E8;
+
+  /* Green (phase active, safe, goals) */
+  --color-green-badge-bg: #EEF9F3;
+  --color-green-badge-text: #16A34A;
+  --color-green-dot: #22C55E;
+
+  /* Red (urgent, crisis) */
+  --color-red-badge-bg: #FEF2F2;
+  --color-red-badge-text: #DC2626;
+
+  /* Blue (routine, bot avatar) */
+  --color-blue-badge-bg: #F0F4FF;
+  --color-blue-badge-text: #3B82F6;
+
+  /* Amber (pending, tool calls) */
+  --color-amber-badge-bg: #FFF7ED;
+  --color-amber-badge-text: #D97706;
+  --color-amber-dot: #F59E0B;
+
+  /* Typography */
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    background: var(--color-bg-page);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
