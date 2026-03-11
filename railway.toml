@@ -3,5 +3,6 @@ builder = "dockerfile"
 
 [deploy]
 healthcheckPath = "/health/live"
-healthcheckTimeout = 30
-startCommand = "alembic upgrade head && python -c 'import asyncio; from health_coach.persistence.db import run_bootstrap; from health_coach.settings import Settings; asyncio.run(run_bootstrap(Settings()))' && python -m health_coach"
+healthcheckTimeout = 120
+preDeployCommand = "alembic upgrade head && python -c 'import asyncio; from health_coach.persistence.db import run_bootstrap; from health_coach.settings import Settings; asyncio.run(run_bootstrap(Settings()))'"
+startCommand = "python -m health_coach"

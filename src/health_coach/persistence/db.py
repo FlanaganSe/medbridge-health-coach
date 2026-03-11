@@ -31,6 +31,7 @@ def create_engine(settings: Settings) -> AsyncEngine:
         kwargs["pool_pre_ping"] = True
         kwargs["pool_size"] = settings.db_pool_size
         kwargs["max_overflow"] = settings.db_max_overflow
+        kwargs["connect_args"] = {"connect_timeout": 10}
 
     return create_async_engine(settings.database_url, **kwargs)
 
@@ -61,6 +62,7 @@ async def create_langgraph_pool(settings: Settings) -> AsyncConnectionPool | Non
             "autocommit": True,
             "prepare_threshold": 0,
             "row_factory": dict_row,
+            "connect_timeout": 10,
         },
     )
 
