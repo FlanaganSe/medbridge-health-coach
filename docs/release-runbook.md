@@ -132,6 +132,12 @@ alembic downgrade <revision_id>
 ## Incident Response
 
 1. **Safety classifier down** — System fails-safe (blocks messages). Investigate API key and model availability.
-2. **Delivery worker stuck** — Check for `delivering` entries older than 5 minutes. Worker auto-recovers on restart.
+2. **Delivery worker stuck** — Check for `delivering` entries older than 5 minutes. The worker runs `_recover_stuck_entries()` on startup, which resets stale `delivering` entries back to `pending`. If the worker process crashes without a clean restart, manually restart it to trigger recovery. There is no periodic sweep during runtime — recovery only occurs at startup.
 3. **Consent service unreachable** — `FailSafeConsentService` blocks all patient messages (fail-closed). Clinician alerts still delivered.
 4. **Database connection exhaustion** — Check pool size settings. Monitor `pool_size=20, max_overflow=10` adequacy.
+
+### Known Pre-Production Gaps
+
+- **Consent wiring**: `create_consent_service()` selects `FakeConsentService` when `medbridge_api_url` is not configured. Before production, ensure `MEDBRIDGE_API_URL` and `MEDBRIDGE_API_KEY` environment variables are set to wire the real `MedBridgeClient` + `FailSafeConsentService`.
+- **Outbox retention**: `outbox_entries.payload` contains patient message text (PHI). Retention policy is TBD — requires organizational decision before production.
+- **Safety decision reasoning**: `safety_decision_records.reasoning` likely contains patient-quoted text. 6-year HIPAA retention applies.

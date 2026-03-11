@@ -6,7 +6,7 @@ property-based tests for invariant verification.
 
 import pytest
 from hypothesis import settings
-from hypothesis.stateful import RuleBasedStateMachine, initialize, precondition, rule
+from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, precondition, rule
 
 from health_coach.domain.errors import PhaseTransitionError
 from health_coach.domain.phase_machine import (
@@ -125,10 +125,13 @@ for (phase, event), target in _TRANSITIONS.items():
 class PatientLifecycleMachine(RuleBasedStateMachine):
     """Property-based test that explores all reachable phase sequences.
 
-    Verifies:
-    - No invalid state is reachable via ANY sequence of events
+    Verifies via @invariant (checked after every rule application):
+    - Phase is always a valid PatientPhase enum member
+    - Phase is never None
+
+    Verifies via rules:
     - All valid transitions produce correct target states
-    - Transition idempotency (attempting invalid transitions raises)
+    - No invalid state is reachable via ANY sequence of events
     - Backoff sequence ACTIVE → RE_ENGAGING → DORMANT cannot be bypassed
     """
 
@@ -189,10 +192,15 @@ class PatientLifecycleMachine(RuleBasedStateMachine):
         assert result == PatientPhase.RE_ENGAGING
         self.phase = result
 
-    # --- Invariant: phase is always a valid PatientPhase ---
+    # --- Invariants (checked after every rule application) ---
 
-    def teardown(self) -> None:
+    @invariant()
+    def phase_is_valid_enum(self) -> None:
         assert self.phase in PatientPhase.__members__.values()
+
+    @invariant()
+    def phase_is_not_none(self) -> None:
+        assert self.phase is not None
 
 
 # Generate the TestCase class — Hypothesis will explore random sequences

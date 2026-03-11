@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import structlog
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 # Fields that must never appear in logs (defense-in-depth)
 _PHI_FIELD_NAMES: frozenset[str] = frozenset(
@@ -41,26 +44,32 @@ _PHI_VALUE_PATTERNS: list[re.Pattern[str]] = [
 ]
 
 
+def _scrub_dict(d: MutableMapping[str, Any]) -> None:
+    """Recursively scrub PHI from a dict-like structure (mutates in place)."""
+    for key in list(d):
+        if key in _PHI_FIELD_NAMES:
+            d[key] = "[REDACTED]"
+            continue
+        value = d[key]
+        if isinstance(value, str):
+            for pattern in _PHI_VALUE_PATTERNS:
+                if pattern.search(value):
+                    d[key] = "[REDACTED]"
+                    break
+        elif isinstance(value, dict):
+            _scrub_dict(value)  # type: ignore[arg-type]
+
+
 def scrub_phi_fields(
     _logger: object, _method_name: str, event_dict: structlog.types.EventDict
 ) -> structlog.types.EventDict:
     """Remove known PHI fields from log events.
 
     Defense-in-depth: even if a developer accidentally binds a PHI field,
-    this processor strips it before the log is emitted.
+    this processor strips it before the log is emitted. Recurses into nested
+    dicts to catch metadata payloads.
     """
-    for field in _PHI_FIELD_NAMES:
-        if field in event_dict:
-            event_dict[field] = "[REDACTED]"
-
-    # Scrub values that match PHI patterns (SSN, email in string values)
-    for key, value in list(event_dict.items()):
-        if isinstance(value, str):
-            for pattern in _PHI_VALUE_PATTERNS:
-                if pattern.search(value):
-                    event_dict[key] = "[REDACTED]"
-                    break
-
+    _scrub_dict(event_dict)
     return event_dict
 
 
@@ -93,10 +102,12 @@ def configure_logging(
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
-        scrub_phi_fields,
         _otel_trace_processor,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        # PHI scrubber runs LAST — after format_exc_info renders exception
+        # text, so exception messages containing PHI are also scrubbed.
+        scrub_phi_fields,
     ]
 
     renderer: structlog.types.Processor

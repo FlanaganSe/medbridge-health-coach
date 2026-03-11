@@ -15,7 +15,7 @@ This document maps where Protected Health Information (PHI) enters, flows throug
 | Patient messages (free text) | Yes | LangGraph checkpointer (conversation replay) | TBD — retention policy pending |
 | Coach responses (generated text) | Yes (may reference health) | LangGraph checkpointer | TBD |
 | Patient goals (structured) | Yes | `patient_goals` table | Duration of care |
-| Safety decision reasoning | Possibly | `safety_decision_records` table | 6 years (HIPAA) |
+| Safety decision reasoning | Likely (LLM may quote patient text) | `safety_decision_records` table | 6 years (HIPAA) |
 | Audit events | Metadata only | `audit_events` table | 6 years (HIPAA) |
 | Clinician alert reasons | Possibly | `clinician_alerts` table | 6 years (HIPAA) |
 | Patient phase | No (enum) | `patients` table | Duration of care |

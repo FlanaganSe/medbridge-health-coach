@@ -100,7 +100,56 @@ def test_non_string_values_not_pattern_matched() -> None:
         "event": "test",
         "count": 42,
         "active": True,
-        "data": {"nested": "value"},
     }
     result = scrub_phi_fields(None, "", event)
     assert result == event
+
+
+def test_scrub_nested_dict_phi_fields() -> None:
+    """PHI fields inside nested dicts are redacted."""
+    event: dict[str, object] = {
+        "event": "test",
+        "metadata": {
+            "patient_name": "Jane Doe",
+            "safe_field": "ok",
+            "email": "jane@example.com",
+        },
+    }
+    result = scrub_phi_fields(None, "", event)
+    metadata = result["metadata"]
+    assert isinstance(metadata, dict)
+    assert metadata["patient_name"] == "[REDACTED]"
+    assert metadata["email"] == "[REDACTED]"
+    assert metadata["safe_field"] == "ok"
+
+
+def test_scrub_deeply_nested_dict() -> None:
+    """PHI scrubbing works on deeply nested dicts."""
+    event: dict[str, object] = {
+        "event": "test",
+        "outer": {
+            "inner": {
+                "diagnosis": "torn ACL",
+                "count": 5,
+            },
+        },
+    }
+    result = scrub_phi_fields(None, "", event)
+    outer = result["outer"]
+    assert isinstance(outer, dict)
+    inner = outer["inner"]
+    assert isinstance(inner, dict)
+    assert inner["diagnosis"] == "[REDACTED]"
+    assert inner["count"] == 5
+
+
+def test_scrub_nested_email_pattern() -> None:
+    """Email patterns in nested dict values are redacted."""
+    event: dict[str, object] = {
+        "event": "test",
+        "details": {"contact": "reach out to user@hospital.org"},
+    }
+    result = scrub_phi_fields(None, "", event)
+    details = result["details"]
+    assert isinstance(details, dict)
+    assert details["contact"] == "[REDACTED]"
