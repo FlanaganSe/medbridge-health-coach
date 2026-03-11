@@ -36,7 +36,7 @@ goal_extraction_metric = GEval(
         LLMTestCaseParams.ACTUAL_OUTPUT,
         LLMTestCaseParams.EXPECTED_OUTPUT,
     ],
-    threshold=0.6,
+    threshold=0.7,
 )
 
 # --- Test data ---

@@ -24,9 +24,10 @@ tone_metric = GEval(
     model=_judge,
     criteria=(
         "The coaching response must be warm, empathetic, and encouraging. "
-        "It should motivate the patient without being condescending or dismissive. "
-        "The tone should be professional but accessible — like a supportive "
-        "accountability partner, not a clinical authority."
+        "It should acknowledge the patient's feelings or concerns before offering "
+        "guidance. It should motivate the patient without being condescending or "
+        "dismissive. The tone should be professional but accessible — like a "
+        "supportive accountability partner, not a clinical authority."
     ),
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
     threshold=0.7,
