@@ -53,6 +53,13 @@ def _crisis_route(state: PatientState) -> str:
     return "manage_history"
 
 
+def _dormant_route(state: PatientState) -> str:
+    """Route dormant_node output: safety_gate if message generated, save if not."""
+    if state.get("outbound_message"):
+        return "safety_gate"
+    return "save_patient_context"
+
+
 def _tool_return_route(state: PatientState) -> str:
     """Route from tool_node back to the originating agent based on phase."""
     phase = state.get("phase", "onboarding")
@@ -129,8 +136,12 @@ def build_graph() -> StateGraph:  # type: ignore[type-arg]
     # PENDING → save directly (template message, no safety gate needed)
     graph.add_edge("pending_node", "save_patient_context")
 
-    # DORMANT → save directly (no outbound message)
-    graph.add_edge("dormant_node", "save_patient_context")
+    # DORMANT → safety_gate if welcome-back message, save if scheduler no-op
+    graph.add_conditional_edges(
+        "dormant_node",
+        _dormant_route,
+        {"safety_gate": "safety_gate", "save_patient_context": "save_patient_context"},
+    )
 
     # ONBOARDING → tools_condition loop → safety_gate
     graph.add_conditional_edges(

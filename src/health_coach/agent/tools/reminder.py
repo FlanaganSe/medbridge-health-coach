@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Any
 
 from langchain_core.messages import ToolMessage
@@ -42,7 +43,7 @@ def set_reminder(
         {
             "job_type": "reminder",
             "idempotency_key": idempotency_key,
-            "scheduled_at": reminder_time,
+            "scheduled_at": datetime.fromisoformat(reminder_time),
             "metadata": {"message": reminder_message},
         }
     )

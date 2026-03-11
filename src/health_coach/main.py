@@ -233,4 +233,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         app.include_router(demo_router)
 
+        # Serve demo UI static files when available (built into Docker image)
+        import pathlib
+
+        static_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "static"
+        if not static_dir.is_dir():
+            static_dir = pathlib.Path("/app/static")
+        if static_dir.is_dir():
+            from starlette.staticfiles import StaticFiles
+
+            app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+
     return app

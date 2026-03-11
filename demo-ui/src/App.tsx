@@ -59,6 +59,7 @@ export function App() {
         </header>
         <DemoControls
           patientId={effectivePatientId}
+          externalPatientId={patientId}
           tenantId={tenantId}
           onPatientSeeded={handlePatientSeeded}
         />

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 
 interface DemoControlsProps {
   patientId: string;
+  externalPatientId: string;
   tenantId: string;
   onPatientSeeded: (id: string) => void;
 }
@@ -19,6 +20,7 @@ type Status = "idle" | "loading" | "success" | "error";
 
 export function DemoControls({
   patientId,
+  externalPatientId,
   tenantId,
   onPatientSeeded,
 }: DemoControlsProps) {
@@ -42,7 +44,7 @@ export function DemoControls({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tenant_id: tenantId,
-          external_patient_id: patientId,
+          external_patient_id: externalPatientId,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -54,7 +56,7 @@ export function DemoControls({
       setSeedStatus("error");
       showStatus(`Seed failed: ${err}`);
     }
-  }, [patientId, tenantId, onPatientSeeded, showStatus]);
+  }, [externalPatientId, tenantId, onPatientSeeded, showStatus]);
 
   const fetchJobs = useCallback(async () => {
     try {

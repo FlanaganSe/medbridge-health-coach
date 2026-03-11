@@ -124,13 +124,51 @@ async def test_pending_phase_routes_to_pending_node(graph) -> None:  # type: ign
     assert effects is None
 
 
-async def test_dormant_phase_produces_no_outbound(graph) -> None:  # type: ignore[no-untyped-def]
-    """DORMANT phase routes to dormant_node — no outbound message."""
+async def test_dormant_scheduler_produces_no_outbound(graph) -> None:  # type: ignore[no-untyped-def]
+    """DORMANT phase with scheduler invocation — no outbound message."""
     from unittest.mock import AsyncMock, MagicMock
 
     patient_id = str(uuid.uuid4())
 
-    # Mock patient in dormant phase
+    mock_patient = MagicMock()
+    mock_patient.phase = "dormant"
+    mock_patient.unanswered_count = 0
+    mock_patient.last_outreach_at = None
+    mock_patient.last_patient_response_at = None
+
+    mock_session = AsyncMock()
+    mock_session.get = AsyncMock(return_value=mock_patient)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+    mock_session.begin = MagicMock(return_value=AsyncMock())
+    mock_session.begin().__aenter__ = AsyncMock(return_value=None)
+    mock_session.begin().__aexit__ = AsyncMock(return_value=None)
+
+    sf = MagicMock()
+    sf.return_value = mock_session
+
+    ctx = _make_ctx(session_factory=sf)
+    config = _make_config(ctx)
+
+    result = await graph.ainvoke(
+        {
+            "patient_id": patient_id,
+            "tenant_id": "t1",
+            "messages": [HumanMessage(content="hello")],
+            "invocation_source": "scheduler",
+        },
+        config=config,
+    )
+
+    assert result.get("outbound_message") is None
+
+
+async def test_dormant_patient_produces_welcome_back(graph) -> None:  # type: ignore[no-untyped-def]
+    """DORMANT phase with patient invocation — generates welcome-back message."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    patient_id = str(uuid.uuid4())
+
     mock_patient = MagicMock()
     mock_patient.phase = "dormant"
     mock_patient.unanswered_count = 0
@@ -161,7 +199,11 @@ async def test_dormant_phase_produces_no_outbound(graph) -> None:  # type: ignor
         config=config,
     )
 
-    assert result.get("outbound_message") is None
+    # Patient-initiated dormant now generates a welcome-back message
+    assert result.get("outbound_message") is not None
+    # Phase event should trigger DORMANT → RE_ENGAGING transition
+    effects = result.get("pending_effects")
+    assert effects is None  # cleared after save_patient_context
 
 
 async def test_crisis_detected_routes_to_fallback(graph) -> None:  # type: ignore[no-untyped-def]

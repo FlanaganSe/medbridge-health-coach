@@ -87,6 +87,24 @@ def test_patient_return_schedules_followup() -> None:
     assert jobs[0]["job_type"] == "day_2_followup"
 
 
+def _make_dormant_config() -> dict:  # type: ignore[type-arg]
+    """Build a minimal LangGraph config for dormant_node tests."""
+    from unittest.mock import MagicMock
+
+    from health_coach.agent.context import CoachContext
+    from health_coach.integrations.model_gateway import FakeModelGateway
+
+    ctx = CoachContext(
+        session_factory=MagicMock(),  # type: ignore[arg-type]
+        engine=MagicMock(),  # type: ignore[arg-type]
+        consent_service=MagicMock(),  # type: ignore[arg-type]
+        settings=MagicMock(),  # type: ignore[arg-type]
+        coach_config=CoachConfig(),
+        model_gateway=FakeModelGateway(),
+    )
+    return {"configurable": {"ctx": ctx}}
+
+
 @pytest.mark.asyncio
 async def test_dormant_node_patient_returns() -> None:
     """Dormant node triggers patient_returned on patient invocation."""
@@ -97,11 +115,15 @@ async def test_dormant_node_patient_returns() -> None:
         "tenant_id": "t1",
         "invocation_source": "patient",
         "pending_effects": {},
+        "messages": [],
     }
-    result = await dormant_node(state)
+    config = _make_dormant_config()
+    result = await dormant_node(state, config)  # type: ignore[arg-type]
 
     effects = result.get("pending_effects", {})
     assert effects.get("phase_event") == "patient_returned"
+    # Now generates a welcome-back message
+    assert result.get("outbound_message") is not None
 
 
 @pytest.mark.asyncio
@@ -115,7 +137,8 @@ async def test_dormant_node_scheduler_noop() -> None:
         "invocation_source": "scheduler",
         "pending_effects": {},
     }
-    result = await dormant_node(state)
+    config = _make_dormant_config()
+    result = await dormant_node(state, config)  # type: ignore[arg-type]
 
     effects = result.get("pending_effects")
     assert effects is None  # No pending_effects set
