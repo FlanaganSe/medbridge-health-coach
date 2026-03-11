@@ -172,7 +172,13 @@ Commit: "feat: API quality, CORS, ASGI middleware, Railway pool sizes"
 
 ---
 
-### M4: Railway Deployment Readiness
+### M4: Railway Deployment Readiness ✅ COMPLETE
+
+- [x] Step 17 — Fix pool size defaults (done in M3)
+- [x] Step 18 — Wire AsyncPostgresSaver via create_checkpointer()
+- [x] Step 19 — Create railway.toml
+- [x] Step 20 — Settings-driven notification/alert channels
+Commit: "feat: Railway deployment readiness"
 
 **Step 17:** Fix pool size defaults
 - **File to change:** `src/health_coach/settings.py`

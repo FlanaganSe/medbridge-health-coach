@@ -1,0 +1,7 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health/live"
+healthcheckTimeout = 30
+startCommand = "alembic upgrade head && python -m health_coach"

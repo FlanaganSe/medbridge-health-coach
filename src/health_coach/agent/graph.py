@@ -192,4 +192,4 @@ def compile_graph(
 ) -> CompiledStateGraph:
     """Build and compile the graph with the given checkpointer."""
     graph = build_graph()
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=checkpointer)  # type: ignore[arg-type]

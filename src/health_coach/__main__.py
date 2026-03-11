@@ -59,15 +59,16 @@ async def _run_worker() -> None:
     import asyncio
 
     import structlog
-    from langgraph.checkpoint.memory import MemorySaver
 
     from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
-    from health_coach.integrations.alert_channel import MockAlertChannel
+    from health_coach.integrations.channels import (
+        create_alert_channel,
+        create_notification_channel,
+    )
     from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
-    from health_coach.integrations.notification import MockNotificationChannel
     from health_coach.observability.logging import configure_logging
     from health_coach.orchestration.delivery_worker import DeliveryWorker
     from health_coach.orchestration.jobs import (
@@ -77,7 +78,12 @@ async def _run_worker() -> None:
     )
     from health_coach.orchestration.reconciliation import startup_recovery
     from health_coach.orchestration.scheduler import SchedulerWorker
-    from health_coach.persistence.db import create_engine, create_session_factory
+    from health_coach.persistence.db import (
+        create_checkpointer,
+        create_engine,
+        create_langgraph_pool,
+        create_session_factory,
+    )
     from health_coach.settings import Settings
 
     settings = Settings(app_mode="worker")
@@ -91,11 +97,16 @@ async def _run_worker() -> None:
 
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
+    langgraph_pool = await create_langgraph_pool(settings)
+    if langgraph_pool is not None:
+        await langgraph_pool.open(wait=True)
+
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
     consent_service = create_consent_service(settings)
 
-    graph = compile_graph(checkpointer=MemorySaver())
+    checkpointer = create_checkpointer(langgraph_pool)
+    graph = compile_graph(checkpointer=checkpointer)  # type: ignore[arg-type]
 
     ctx_factory = create_context_factory(
         consent_service=consent_service,
@@ -127,8 +138,8 @@ async def _run_worker() -> None:
     delivery = DeliveryWorker(
         session_factory=session_factory,
         consent_service=consent_service,
-        notification_channel=MockNotificationChannel(),
-        alert_channel=MockAlertChannel(),
+        notification_channel=create_notification_channel(settings),
+        alert_channel=create_alert_channel(settings),
         poll_interval_seconds=settings.delivery_poll_interval_seconds,
     )
 
@@ -142,6 +153,8 @@ async def _run_worker() -> None:
         scheduler.shutdown_event.set()
         delivery.shutdown_event.set()
     finally:
+        if langgraph_pool is not None:
+            await langgraph_pool.close()
         await engine.dispose()
         await log.ainfo("worker_shutdown")
 

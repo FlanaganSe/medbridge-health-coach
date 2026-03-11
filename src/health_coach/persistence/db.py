@@ -65,6 +65,24 @@ async def create_langgraph_pool(settings: Settings) -> AsyncConnectionPool | Non
     )
 
 
+def create_checkpointer(
+    langgraph_pool: object | None = None,
+) -> object:
+    """Create the appropriate LangGraph checkpointer.
+
+    Uses AsyncPostgresSaver when a psycopg pool is provided,
+    otherwise falls back to MemorySaver for SQLite/dev.
+    """
+    if langgraph_pool is not None:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        return AsyncPostgresSaver(langgraph_pool)  # type: ignore[arg-type]
+
+    from langgraph.checkpoint.memory import MemorySaver
+
+    return MemorySaver()
+
+
 @asynccontextmanager
 async def get_session(
     session_factory: async_sessionmaker[AsyncSession],

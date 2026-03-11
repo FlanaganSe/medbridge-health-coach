@@ -52,18 +52,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.session_factory = session_factory
     app.state.langgraph_pool = langgraph_pool
 
-    # Set up graph and context factory for API endpoints
-    _setup_graph_and_context(app, session_factory, engine, settings)
-
     if langgraph_pool is not None:
         await langgraph_pool.open(wait=True)
         await logger.ainfo("langgraph_pool_opened")
+
+    # Set up graph and context factory for API endpoints
+    _setup_graph_and_context(app, session_factory, engine, settings, langgraph_pool)
 
     # Start background workers in "all" mode
     worker_task: asyncio.Task[None] | None = None
     if settings.app_mode == "all":
         worker_task = asyncio.create_task(
-            _run_background_workers(session_factory, engine, settings),
+            _run_background_workers(session_factory, engine, settings, langgraph_pool),
             name="background_workers",
         )
 
@@ -94,20 +94,21 @@ def _setup_graph_and_context(
     session_factory: async_sessionmaker[AsyncSession],
     engine: AsyncEngine,
     settings: Settings,
+    langgraph_pool: object | None = None,
 ) -> None:
     """Set up graph and context factory on app.state for API endpoints."""
-    from langgraph.checkpoint.memory import MemorySaver
-
     from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
+    from health_coach.persistence.db import create_checkpointer
 
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
     consent_service = create_consent_service(settings)
-    graph = compile_graph(checkpointer=MemorySaver())
+    checkpointer = create_checkpointer(langgraph_pool)
+    graph = compile_graph(checkpointer=checkpointer)  # type: ignore[arg-type]
 
     ctx_factory = create_context_factory(
         consent_service=consent_service,
@@ -124,17 +125,18 @@ async def _run_background_workers(
     session_factory: async_sessionmaker[AsyncSession],
     engine: AsyncEngine,
     settings: Settings,
+    langgraph_pool: object | None = None,
 ) -> None:
     """Run scheduler and delivery workers as background tasks (all mode only)."""
-    from langgraph.checkpoint.memory import MemorySaver
-
     from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
-    from health_coach.integrations.alert_channel import MockAlertChannel
+    from health_coach.integrations.channels import (
+        create_alert_channel,
+        create_notification_channel,
+    )
     from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
-    from health_coach.integrations.notification import MockNotificationChannel
     from health_coach.orchestration.delivery_worker import DeliveryWorker
     from health_coach.orchestration.jobs import (
         FollowupJobHandler,
@@ -143,6 +145,7 @@ async def _run_background_workers(
     )
     from health_coach.orchestration.reconciliation import startup_recovery
     from health_coach.orchestration.scheduler import SchedulerWorker
+    from health_coach.persistence.db import create_checkpointer
 
     logger = structlog.stdlib.get_logger()
 
@@ -150,7 +153,8 @@ async def _run_background_workers(
     model_gateway = AnthropicModelGateway(settings)
     consent_service = create_consent_service(settings)
 
-    graph = compile_graph(checkpointer=MemorySaver())
+    checkpointer = create_checkpointer(langgraph_pool)
+    graph = compile_graph(checkpointer=checkpointer)  # type: ignore[arg-type]
 
     ctx_factory = create_context_factory(
         consent_service=consent_service,
@@ -179,8 +183,8 @@ async def _run_background_workers(
     delivery = DeliveryWorker(
         session_factory=session_factory,
         consent_service=consent_service,
-        notification_channel=MockNotificationChannel(),
-        alert_channel=MockAlertChannel(),
+        notification_channel=create_notification_channel(settings),
+        alert_channel=create_alert_channel(settings),
         poll_interval_seconds=settings.delivery_poll_interval_seconds,
     )
 
