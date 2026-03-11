@@ -6,10 +6,14 @@ All endpoints are tenant-scoped via auth context.
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING
 
 import structlog
+
+if TYPE_CHECKING:
+    from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
 from health_coach.api.dependencies import AuthContext, get_auth_context
@@ -24,23 +28,78 @@ logger = structlog.stdlib.get_logger()
 router = APIRouter(prefix="/v1/patients", tags=["state"])
 
 
-@router.get("/{patient_id}/phase")
+# --- Response models ---
+
+
+class PhaseResponse(BaseModel):
+    patient_id: str
+    phase: str
+
+
+class GoalItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    goal_text: str
+    confirmed_at: datetime | None
+    created_at: datetime
+
+
+class GoalsResponse(BaseModel):
+    patient_id: str
+    goals: list[GoalItem]
+
+
+class SafetyDecisionItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    decision: str
+    source: str
+    confidence: float | None
+    created_at: datetime
+
+
+class SafetyDecisionsResponse(BaseModel):
+    patient_id: str
+    decisions: list[SafetyDecisionItem]
+
+
+class AlertItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    reason: str
+    priority: str
+    acknowledged_at: datetime | None
+    created_at: datetime
+
+
+class AlertsResponse(BaseModel):
+    patient_id: str
+    alerts: list[AlertItem]
+
+
+# --- Endpoints ---
+
+
+@router.get("/{patient_id}/phase", response_model=PhaseResponse)
 async def get_patient_phase(
     patient_id: str,
     request: Request,
     auth: AuthContext = Depends(get_auth_context),  # noqa: B008
-) -> dict[str, str]:
+) -> PhaseResponse:
     """Get a patient's current phase."""
     patient = await _get_patient(request, patient_id, auth.tenant_id)
-    return {"patient_id": patient_id, "phase": patient.phase}
+    return PhaseResponse(patient_id=patient_id, phase=patient.phase)
 
 
-@router.get("/{patient_id}/goals")
+@router.get("/{patient_id}/goals", response_model=GoalsResponse)
 async def get_patient_goals(
     patient_id: str,
     request: Request,
     auth: AuthContext = Depends(get_auth_context),  # noqa: B008
-) -> dict[str, Any]:
+) -> GoalsResponse:
     """Get a patient's goals."""
     patient = await _get_patient(request, patient_id, auth.tenant_id)
     session_factory = request.app.state.session_factory
@@ -53,26 +112,18 @@ async def get_patient_goals(
         )
         goals = list(result.scalars().all())
 
-    return {
-        "patient_id": patient_id,
-        "goals": [
-            {
-                "id": str(g.id),
-                "goal_text": g.goal_text,
-                "confirmed_at": g.confirmed_at.isoformat() if g.confirmed_at else None,
-                "created_at": g.created_at.isoformat(),
-            }
-            for g in goals
-        ],
-    }
+    return GoalsResponse(
+        patient_id=patient_id,
+        goals=[GoalItem.model_validate(g) for g in goals],
+    )
 
 
-@router.get("/{patient_id}/safety-decisions")
+@router.get("/{patient_id}/safety-decisions", response_model=SafetyDecisionsResponse)
 async def get_safety_decisions(
     patient_id: str,
     request: Request,
     auth: AuthContext = Depends(get_auth_context),  # noqa: B008
-) -> dict[str, Any]:
+) -> SafetyDecisionsResponse:
     """Get a patient's safety decision history."""
     patient = await _get_patient(request, patient_id, auth.tenant_id)
     session_factory = request.app.state.session_factory
@@ -86,27 +137,18 @@ async def get_safety_decisions(
         )
         decisions = list(result.scalars().all())
 
-    return {
-        "patient_id": patient_id,
-        "decisions": [
-            {
-                "id": str(d.id),
-                "decision": d.decision,
-                "source": d.source,
-                "confidence": d.confidence,
-                "created_at": d.created_at.isoformat(),
-            }
-            for d in decisions
-        ],
-    }
+    return SafetyDecisionsResponse(
+        patient_id=patient_id,
+        decisions=[SafetyDecisionItem.model_validate(d) for d in decisions],
+    )
 
 
-@router.get("/{patient_id}/alerts")
+@router.get("/{patient_id}/alerts", response_model=AlertsResponse)
 async def get_clinician_alerts(
     patient_id: str,
     request: Request,
     auth: AuthContext = Depends(get_auth_context),  # noqa: B008
-) -> dict[str, Any]:
+) -> AlertsResponse:
     """Get clinician alerts for a patient."""
     patient = await _get_patient(request, patient_id, auth.tenant_id)
     session_factory = request.app.state.session_factory
@@ -120,19 +162,10 @@ async def get_clinician_alerts(
         )
         alerts = list(result.scalars().all())
 
-    return {
-        "patient_id": patient_id,
-        "alerts": [
-            {
-                "id": str(a.id),
-                "reason": a.reason,
-                "priority": a.priority,
-                "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
-                "created_at": a.created_at.isoformat(),
-            }
-            for a in alerts
-        ],
-    }
+    return AlertsResponse(
+        patient_id=patient_id,
+        alerts=[AlertItem.model_validate(a) for a in alerts],
+    )
 
 
 async def _get_patient(

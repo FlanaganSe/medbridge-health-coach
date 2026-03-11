@@ -23,11 +23,11 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = "sqlite+aiosqlite:///./health_coach.db"
-    db_pool_size: int = 20
-    db_max_overflow: int = 10
+    db_pool_size: int = 5
+    db_max_overflow: int = 5
 
     # --- LangGraph ---
-    langgraph_pool_size: int = 10
+    langgraph_pool_size: int = 3
 
     # --- Logging ---
     log_level: str = "INFO"
@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     app_mode: Literal["api", "worker", "all"] = "all"
     host: str = "0.0.0.0"  # noqa: S104
     port: int = 8000
+    cors_origins: list[str] = ["http://localhost:5173"]
 
     @field_validator("database_url")
     @classmethod

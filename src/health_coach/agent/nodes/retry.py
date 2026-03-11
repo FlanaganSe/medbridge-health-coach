@@ -36,8 +36,8 @@ async def retry_generation(
 ) -> dict[str, object]:
     """Re-invoke the LLM with augmented safety constraints.
 
-    Appends an augmented HumanMessage with tighter constraints and
-    re-generates the response. Increments safety_retry_count.
+    Injects safety augmentation into the system prompt (not persisted)
+    and re-generates the response. Increments safety_retry_count.
     """
     ctx = get_coach_context(config)
     patient_id = state["patient_id"]

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from fastapi import APIRouter, Depends, Request
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from health_coach.api.dependencies import AuthContext, get_auth_context
@@ -24,27 +25,20 @@ logger = structlog.stdlib.get_logger()
 router = APIRouter(prefix="/v1", tags=["chat"])
 
 
-class ChatRequest:
+class ChatRequest(BaseModel):
     """Chat request body."""
 
-    def __init__(self, message: str) -> None:
-        self.message = message
+    message: str = Field(min_length=1)
 
 
 @router.post("/chat")
 async def chat(
+    body: ChatRequest,
     request: Request,
     auth: AuthContext = Depends(get_auth_context),  # noqa: B008
 ) -> StreamingResponse:
     """Accept a patient message and stream the coaching response via SSE."""
-    body = await request.json()
-    message = str(body.get("message", ""))
-    if not message:
-        return StreamingResponse(
-            _error_event("Message is required"),
-            media_type="text/event-stream",
-            status_code=400,
-        )
+    message = body.message
 
     graph = request.app.state.graph
     engine = request.app.state.engine
@@ -94,8 +88,3 @@ async def chat(
 def _format_sse(data: dict[str, Any]) -> str:
     """Format a dict as an SSE event."""
     return f"data: {json.dumps(data, default=str)}\n\n"
-
-
-async def _error_event(message: str) -> AsyncGenerator[str, None]:
-    """Yield a single error SSE event."""
-    yield _format_sse({"type": "error", "message": message})

@@ -126,7 +126,14 @@ Commit: "refactor: code quality — deduplicate, remove dead code, improve type 
 
 ---
 
-### M3: API Quality & Middleware (type safety + deployment prep)
+### M3: API Quality & Middleware (type safety + deployment prep) ✅ COMPLETE
+
+- [x] Step 13 — Pydantic response models on state endpoints
+- [x] Step 14 — Pydantic request model for chat endpoint
+- [x] Step 15 — CORS middleware + settings
+- [x] Step 16 — Replace BaseHTTPMiddleware with pure ASGI middleware
+- [x] Step 17 — Fix pool size defaults (5+5=10 << Railway 25 limit)
+Commit: "feat: API quality, CORS, ASGI middleware, Railway pool sizes"
 
 **Step 13:** Use Pydantic response models on state endpoints
 - **File to change:** `src/health_coach/api/routes/state.py`
