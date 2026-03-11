@@ -19,7 +19,16 @@ COPY alembic.ini .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Stage 2: Runtime
+# Stage 2: UI build
+FROM node:22-slim AS ui-builder
+
+WORKDIR /app/demo-ui
+COPY demo-ui/package.json demo-ui/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY demo-ui/ ./
+RUN npm run build
+
+# Stage 3: Runtime
 FROM python:3.12-slim AS runtime
 
 RUN groupadd --gid 1000 appuser && \
@@ -31,6 +40,7 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/alembic /app/alembic
 COPY --from=builder /app/alembic.ini /app/alembic.ini
+COPY --from=ui-builder /app/demo-ui/dist /app/static
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
