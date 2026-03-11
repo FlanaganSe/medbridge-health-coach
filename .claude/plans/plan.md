@@ -725,7 +725,7 @@ Write tests using `InMemorySaver` + `InMemoryStore`:
 
 ---
 
-## Milestone 4: Safe Onboarding
+## Milestone 4: Safe Onboarding ✅ COMPLETE
 
 **Objective:** Deliver the first end-to-end patient value path: a patient can complete onboarding safely with auditable outcomes.
 **PRD ref:** §11 M4; FR-1, FR-4, FR-5, FR-9, FR-10; NFR-3, NFR-4

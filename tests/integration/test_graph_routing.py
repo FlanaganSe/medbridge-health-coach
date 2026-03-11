@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import pytest
 from langchain_core.messages import HumanMessage
@@ -11,10 +11,13 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from health_coach.agent.context import CoachContext
 from health_coach.agent.graph import compile_graph
-from health_coach.agent.nodes.fallback import SAFE_FALLBACK_MESSAGE
 from health_coach.agent.nodes.pending import WELCOME_MESSAGE
-from health_coach.domain.consent import ConsentResult, FakeConsentService
+from health_coach.domain.consent import FakeConsentService
 from health_coach.domain.scheduling import CoachConfig
+from health_coach.integrations.model_gateway import FakeModelGateway
+
+if TYPE_CHECKING:
+    from health_coach.agent.state import PatientState
 
 
 def _make_ctx(
@@ -37,6 +40,7 @@ def _make_ctx(
         consent_service=consent_svc,
         settings=MagicMock(),  # type: ignore[arg-type]
         coach_config=CoachConfig(),
+        model_gateway=FakeModelGateway(),
     )
 
 
@@ -209,7 +213,6 @@ async def test_crisis_detected_routes_to_fallback(graph) -> None:  # type: ignor
 async def test_phase_router_all_phases(graph) -> None:  # type: ignore[no-untyped-def]
     """All 5 phases route to the correct node."""
     from health_coach.agent.nodes.router import phase_router
-    from health_coach.agent.state import PatientState
     from health_coach.domain.phases import PatientPhase
 
     expected = {

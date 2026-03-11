@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from health_coach.agent.state import PatientState, PendingEffects
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from health_coach.agent.state import PatientState, PendingEffects
 
 
 def test_patient_state_is_typeddict() -> None:

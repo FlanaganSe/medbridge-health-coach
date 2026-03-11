@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from health_coach.domain.consent import ConsentService
     from health_coach.domain.scheduling import CoachConfig
+    from health_coach.integrations.model_gateway import ModelGateway
     from health_coach.settings import Settings
 
 
@@ -27,6 +28,7 @@ class CoachContext:
     consent_service: ConsentService
     settings: Settings
     coach_config: CoachConfig
+    model_gateway: ModelGateway
 
 
 def get_coach_context(config: RunnableConfig) -> CoachContext:

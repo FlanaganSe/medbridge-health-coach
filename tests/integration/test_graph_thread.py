@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -12,6 +11,7 @@ from health_coach.agent.context import CoachContext
 from health_coach.agent.graph import compile_graph
 from health_coach.domain.consent import FakeConsentService
 from health_coach.domain.scheduling import CoachConfig
+from health_coach.integrations.model_gateway import FakeModelGateway
 
 
 def _make_mock_session():  # type: ignore[no-untyped-def]
@@ -46,6 +46,7 @@ async def test_thread_persistence_across_invocations() -> None:
         consent_service=consent_svc,
         settings=MagicMock(),  # type: ignore[arg-type]
         coach_config=CoachConfig(),
+        model_gateway=FakeModelGateway(),
     )
 
     thread_id = str(uuid.uuid4())
@@ -104,6 +105,7 @@ async def test_different_threads_are_independent() -> None:
         consent_service=consent_svc,
         settings=MagicMock(),  # type: ignore[arg-type]
         coach_config=CoachConfig(),
+        model_gateway=FakeModelGateway(),
     )
 
     patient_a = str(uuid.uuid4())

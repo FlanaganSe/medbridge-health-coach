@@ -44,6 +44,7 @@ def set_goal(
             "raw_patient_text": raw_patient_text,
             "idempotency_key": idempotency_key,
         },
+        "phase_event": "goal_confirmed",
     }
 
     return Command(

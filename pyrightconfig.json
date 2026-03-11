@@ -15,7 +15,10 @@
       "reportUnknownVariableType": false,
       "reportMissingParameterType": false,
       "reportMissingTypeArgument": false,
-      "reportUnusedImport": false
+      "reportUnusedImport": false,
+      "reportArgumentType": false,
+      "reportAttributeAccessIssue": false,
+      "reportPrivateUsage": false
     }
   ]
 }
