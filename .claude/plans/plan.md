@@ -216,7 +216,13 @@ Commit: "feat: Railway deployment readiness"
 
 ---
 
-### M5: Demo UI Improvements
+### M5: Demo UI Improvements ✅ COMPLETE
+
+- [x] Step 21 — Demo API endpoints (seed, trigger, reset, jobs)
+- [x] Step 22 — Chat SSE fix with line-buffered parser
+- [x] Step 23 — DemoControls panel
+- [x] Step 24 — Sidebar improvements (polling 2s, phase colors, load state, timestamps)
+Commit: "feat: demo UI — controls panel, SSE fix, observability improvements"
 
 **Step 21:** Add demo API endpoints for patient seeding and follow-up triggering
 - **File to create:** `src/health_coach/api/routes/demo.py`

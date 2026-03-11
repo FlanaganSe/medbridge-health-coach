@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface SidebarProps {
   patientId: string;
@@ -22,10 +22,22 @@ interface PatientState {
   }>;
 }
 
+type LoadState = "loading" | "loaded" | "error";
+
+const POLL_MS = 2000;
+
 const HEADERS = (patientId: string, tenantId: string) => ({
   "X-Patient-ID": patientId,
   "X-Tenant-ID": tenantId,
 });
+
+const PHASE_COLORS: Record<string, string> = {
+  pending: "#fef3c7",
+  onboarding: "#dbeafe",
+  active: "#dcfce7",
+  re_engaging: "#fce7f3",
+  dormant: "#f3f4f6",
+};
 
 export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
   const [state, setState] = useState<PatientState>({
@@ -34,6 +46,9 @@ export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
     alerts: [],
     safetyDecisions: [],
   });
+  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const mountedRef = useRef(true);
 
   const fetchState = useCallback(async () => {
     const headers = HEADERS(patientId, tenantId);
@@ -45,6 +60,8 @@ export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
         fetch(`/v1/patients/${patientId}/safety-decisions`, { headers }),
       ]);
 
+      if (!mountedRef.current) return;
+
       const phase = phaseRes.ok ? (await phaseRes.json()).phase : "error";
       const goals = goalsRes.ok ? (await goalsRes.json()).goals : [];
       const alerts = alertsRes.ok ? (await alertsRes.json()).alerts : [];
@@ -53,15 +70,24 @@ export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
         : [];
 
       setState({ phase, goals, alerts, safetyDecisions });
+      setLoadState("loaded");
+      setLastUpdated(new Date());
     } catch {
-      // Silently handle fetch errors in demo UI
+      if (mountedRef.current) {
+        setLoadState("error");
+      }
     }
   }, [patientId, tenantId]);
 
   useEffect(() => {
+    mountedRef.current = true;
+    setLoadState("loading");
     fetchState();
-    const interval = setInterval(fetchState, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchState, POLL_MS);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(interval);
+    };
   }, [fetchState]);
 
   return (
@@ -74,14 +100,34 @@ export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
         fontSize: 13,
       }}
     >
-      <h2 style={{ margin: "0 0 12px", fontSize: 16 }}>Observability</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 16 }}>Observability</h2>
+        {loadState === "loading" && (
+          <span style={{ color: "#9ca3af", fontSize: 11 }}>Loading...</span>
+        )}
+        {loadState === "error" && (
+          <span style={{ color: "#ef4444", fontSize: 11 }}>Error</span>
+        )}
+        {loadState === "loaded" && lastUpdated && (
+          <span style={{ color: "#9ca3af", fontSize: 11 }}>
+            {lastUpdated.toLocaleTimeString()}
+          </span>
+        )}
+      </div>
 
       <Section title="Phase">
         <span
           style={{
             padding: "2px 8px",
             borderRadius: 4,
-            background: "#dbeafe",
+            background: PHASE_COLORS[state.phase] ?? "#f3f4f6",
             fontWeight: 600,
           }}
         >
@@ -118,7 +164,20 @@ export function ObservabilitySidebar({ patientId, tenantId }: SidebarProps) {
       <Section title={`Safety (${state.safetyDecisions.length})`}>
         {state.safetyDecisions.slice(0, 10).map((d) => (
           <div key={d.id} style={{ marginBottom: 4 }}>
-            {d.decision} ({d.source})
+            <span
+              style={{
+                display: "inline-block",
+                padding: "1px 4px",
+                borderRadius: 3,
+                background:
+                  d.decision === "allow" ? "#dcfce7" : "#fef2f2",
+                fontSize: 11,
+                marginRight: 4,
+              }}
+            >
+              {d.decision}
+            </span>
+            <span style={{ color: "#6b7280" }}>{d.source}</span>
           </div>
         ))}
         {state.safetyDecisions.length === 0 && <Muted>No decisions</Muted>}
@@ -145,5 +204,7 @@ function Section({
 }
 
 function Muted({ children }: { children: React.ReactNode }) {
-  return <div style={{ color: "#9ca3af", fontStyle: "italic" }}>{children}</div>;
+  return (
+    <div style={{ color: "#9ca3af", fontStyle: "italic" }}>{children}</div>
+  );
 }

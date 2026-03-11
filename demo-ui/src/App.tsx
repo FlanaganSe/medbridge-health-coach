@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Chat } from "./components/Chat";
+import { DemoControls } from "./components/DemoControls";
 import { ObservabilitySidebar } from "./components/ObservabilitySidebar";
 
 const DEMO_PATIENTS = [
@@ -10,6 +11,16 @@ const DEMO_PATIENTS = [
 export function App() {
   const [patientId, setPatientId] = useState(DEMO_PATIENTS[0].id);
   const tenantId = "demo-tenant";
+
+  // Track the internal DB UUID (returned from seed-patient)
+  const [internalId, setInternalId] = useState<string | null>(null);
+
+  const handlePatientSeeded = useCallback((id: string) => {
+    setInternalId(id);
+  }, []);
+
+  // Use internal ID for demo API calls if available, external ID otherwise
+  const effectivePatientId = internalId ?? patientId;
 
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "system-ui" }}>
@@ -26,7 +37,10 @@ export function App() {
           <h1 style={{ margin: 0, fontSize: 18 }}>Health Coach Demo</h1>
           <select
             value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
+            onChange={(e) => {
+              setPatientId(e.target.value);
+              setInternalId(null);
+            }}
             style={{ padding: "4px 8px" }}
           >
             {DEMO_PATIENTS.map((p) => (
@@ -35,10 +49,25 @@ export function App() {
               </option>
             ))}
           </select>
+          {internalId && (
+            <span
+              style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}
+            >
+              DB: {internalId.slice(0, 8)}...
+            </span>
+          )}
         </header>
+        <DemoControls
+          patientId={effectivePatientId}
+          tenantId={tenantId}
+          onPatientSeeded={handlePatientSeeded}
+        />
         <Chat patientId={patientId} tenantId={tenantId} />
       </div>
-      <ObservabilitySidebar patientId={patientId} tenantId={tenantId} />
+      <ObservabilitySidebar
+        patientId={effectivePatientId}
+        tenantId={tenantId}
+      />
     </div>
   );
 }

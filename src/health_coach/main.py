@@ -228,4 +228,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(state_router)
     app.include_router(webhook_router)
 
+    if settings.environment == "dev":
+        from health_coach.api.routes.demo import router as demo_router
+
+        app.include_router(demo_router)
+
     return app
