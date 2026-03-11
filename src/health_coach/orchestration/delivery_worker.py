@@ -17,10 +17,11 @@ from __future__ import annotations
 import asyncio
 import random
 import time
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from health_coach.integrations.notification import DeliveryResult
 from health_coach.persistence.models import (
@@ -42,6 +43,7 @@ logger = structlog.stdlib.get_logger()
 _DEFAULT_BATCH_SIZE = 20
 _JITTER_FRACTION = 0.2
 _MAX_DELIVERY_ATTEMPTS = 5
+_STUCK_THRESHOLD_MINUTES = 5
 
 
 class DeliveryWorker:
@@ -71,6 +73,8 @@ class DeliveryWorker:
 
     async def run(self) -> None:
         """Main poll loop — runs until shutdown_event is set."""
+        # Recover stuck entries on startup
+        await self._recover_stuck_entries()
         await logger.ainfo("delivery_worker_started", poll_interval=self._poll_interval)
 
         while not self._shutdown_event.is_set():
@@ -91,6 +95,25 @@ class DeliveryWorker:
                 continue
 
         await logger.ainfo("delivery_worker_stopped")
+
+    async def _recover_stuck_entries(self) -> None:
+        """Reset entries stuck in 'delivering' back to 'pending'.
+
+        Called on startup and periodically to recover from worker crashes.
+        """
+        cutoff = datetime.now(UTC) - timedelta(minutes=_STUCK_THRESHOLD_MINUTES)
+        async with self._session_factory() as session, session.begin():
+            result = await session.execute(
+                update(OutboxEntry)
+                .where(
+                    OutboxEntry.status == "delivering",
+                    OutboxEntry.updated_at <= cutoff,
+                )
+                .values(status="pending")
+            )
+            count = result.rowcount  # type: ignore[assignment]
+        if count and count > 0:
+            await logger.awarning("delivery_recovered_stuck_entries", count=count)
 
     async def _poll_and_deliver(self) -> int:
         """Claim pending outbox entries and deliver them."""
@@ -134,24 +157,24 @@ class DeliveryWorker:
         start = time.monotonic()
         try:
             if entry.message_type == "clinician_alert":
-                result = await self._deliver_alert(entry)
+                delivery_result = await self._deliver_alert(entry)
             else:
-                result = await self._deliver_message(entry)
+                delivery_result = await self._deliver_message(entry)
 
             latency_ms = int((time.monotonic() - start) * 1000)
 
-            await self._record_attempt(
+            attempt_number = await self._record_attempt(
                 entry,
-                outcome="success" if result.success else "failed",
-                receipt=result.receipt if result.success else None,
-                error=result.error,
+                outcome="success" if delivery_result.success else "failed",
+                receipt=delivery_result.receipt if delivery_result.success else None,
+                error=delivery_result.error,
                 latency_ms=latency_ms,
             )
 
-            if result.success:
+            if delivery_result.success:
                 await self._mark_entry(entry.id, "delivered")
             else:
-                await self._handle_delivery_failure(entry)
+                await self._handle_delivery_failure(entry, attempt_number)
 
         except Exception as exc:
             latency_ms = int((time.monotonic() - start) * 1000)
@@ -160,13 +183,13 @@ class DeliveryWorker:
                 outbox_id=str(entry.id),
                 patient_id=patient_id,
             )
-            await self._record_attempt(
+            attempt_number = await self._record_attempt(
                 entry,
                 outcome="failed",
                 error=str(exc),
                 latency_ms=latency_ms,
             )
-            await self._handle_delivery_failure(entry)
+            await self._handle_delivery_failure(entry, attempt_number)
 
     async def _deliver_message(self, entry: OutboxEntry) -> DeliveryResult:
         """Deliver a patient-facing message."""
@@ -182,16 +205,12 @@ class DeliveryWorker:
         )
 
     async def _deliver_alert(self, entry: OutboxEntry) -> DeliveryResult:
-        """Deliver a clinician alert."""
-        async with self._session_factory() as session:
+        """Deliver a clinician alert, matched by delivery_key."""
+        async with self._session_factory() as session, session.begin():
             alert = await session.execute(
-                select(ClinicianAlert)
-                .where(
-                    ClinicianAlert.patient_id == entry.patient_id,
-                    ClinicianAlert.tenant_id == entry.tenant_id,
+                select(ClinicianAlert).where(
+                    ClinicianAlert.idempotency_key == entry.delivery_key,
                 )
-                .order_by(ClinicianAlert.created_at.desc())
-                .limit(1)
             )
             alert_row = alert.scalars().first()
 
@@ -199,6 +218,7 @@ class DeliveryWorker:
             await logger.awarning(
                 "delivery_alert_not_found",
                 outbox_id=str(entry.id),
+                delivery_key=entry.delivery_key,
             )
             return DeliveryResult(success=False, error="alert_not_found")
 
@@ -234,21 +254,15 @@ class DeliveryWorker:
                 update(OutboxEntry).where(OutboxEntry.id == entry_id).values(status=status)
             )
 
-    async def _handle_delivery_failure(self, entry: OutboxEntry) -> None:
-        """Check attempt count and dead-letter if max exceeded."""
-        async with self._session_factory() as session:
-            count_result = await session.execute(
-                select(DeliveryAttempt).where(DeliveryAttempt.outbox_entry_id == entry.id)
-            )
-            attempt_count = len(list(count_result.scalars().all()))
-
-        if attempt_count >= _MAX_DELIVERY_ATTEMPTS:
+    async def _handle_delivery_failure(self, entry: OutboxEntry, attempt_number: int) -> None:
+        """Dead-letter if max attempts exceeded, otherwise reset to pending."""
+        if attempt_number >= _MAX_DELIVERY_ATTEMPTS:
             await self._mark_entry(entry.id, "dead")
             await logger.awarning(
                 "delivery_dead_letter",
                 outbox_id=str(entry.id),
                 patient_id=str(entry.patient_id),
-                attempts=attempt_count,
+                attempts=attempt_number,
             )
         else:
             # Reset to pending for retry
@@ -262,14 +276,16 @@ class DeliveryWorker:
         receipt: dict[str, object] | None = None,
         error: str | None = None,
         latency_ms: int = 0,
-    ) -> None:
-        """Record a delivery attempt."""
+    ) -> int:
+        """Record a delivery attempt. Returns the attempt number."""
         async with self._session_factory() as session, session.begin():
-            # Count existing attempts
+            # Count + insert in same transaction to avoid race conditions
             count_result = await session.execute(
-                select(DeliveryAttempt).where(DeliveryAttempt.outbox_entry_id == entry.id)
+                select(func.count())
+                .select_from(DeliveryAttempt)
+                .where(DeliveryAttempt.outbox_entry_id == entry.id)
             )
-            attempt_number = len(list(count_result.scalars().all())) + 1
+            attempt_number = (count_result.scalar() or 0) + 1
 
             session.add(
                 DeliveryAttempt(
@@ -282,3 +298,5 @@ class DeliveryWorker:
                     latency_ms=latency_ms,
                 )
             )
+
+        return attempt_number

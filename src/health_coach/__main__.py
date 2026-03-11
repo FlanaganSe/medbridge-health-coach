@@ -63,9 +63,9 @@ async def _run_worker() -> None:
 
     from health_coach.agent.context import CoachContext
     from health_coach.agent.graph import compile_graph
-    from health_coach.domain.consent import FakeConsentService
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.alert_channel import MockAlertChannel
+    from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
     from health_coach.integrations.notification import MockNotificationChannel
     from health_coach.observability.logging import configure_logging
@@ -93,7 +93,7 @@ async def _run_worker() -> None:
     session_factory = create_session_factory(engine)
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
-    consent_service = FakeConsentService(logged_in=True, consented=True)
+    consent_service = create_consent_service(settings)
 
     graph = compile_graph(checkpointer=MemorySaver())
 

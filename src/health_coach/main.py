@@ -97,19 +97,20 @@ def _setup_graph_and_context(
 
     from health_coach.agent.context import CoachContext
     from health_coach.agent.graph import compile_graph
-    from health_coach.domain.consent import FakeConsentService
     from health_coach.domain.scheduling import CoachConfig
+    from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
 
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
+    consent_service = create_consent_service(settings)
     graph = compile_graph(checkpointer=MemorySaver())
 
     def ctx_factory(session_factory: object, engine: object) -> CoachContext:
         return CoachContext(
             session_factory=session_factory,  # type: ignore[arg-type]
             engine=engine,  # type: ignore[arg-type]
-            consent_service=FakeConsentService(logged_in=True, consented=True),
+            consent_service=consent_service,
             settings=settings,
             coach_config=coach_config,
             model_gateway=model_gateway,
@@ -129,9 +130,9 @@ async def _run_background_workers(
 
     from health_coach.agent.context import CoachContext
     from health_coach.agent.graph import compile_graph
-    from health_coach.domain.consent import FakeConsentService
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.alert_channel import MockAlertChannel
+    from health_coach.integrations.consent_factory import create_consent_service
     from health_coach.integrations.model_gateway import AnthropicModelGateway
     from health_coach.integrations.notification import MockNotificationChannel
     from health_coach.orchestration.delivery_worker import DeliveryWorker
@@ -147,7 +148,7 @@ async def _run_background_workers(
 
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
-    consent_service = FakeConsentService(logged_in=True, consented=True)
+    consent_service = create_consent_service(settings)
 
     graph = compile_graph(checkpointer=MemorySaver())
 

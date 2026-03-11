@@ -14,7 +14,6 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from health_coach.integrations.medbridge import verify_webhook_signature
 from health_coach.persistence.models import (
@@ -27,6 +26,26 @@ logger = structlog.stdlib.get_logger()
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
+def _insert_on_conflict_ignore(model: type, **values: object) -> object:
+    """Create an INSERT ... ON CONFLICT DO NOTHING statement, dialect-aware."""
+    try:
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        return (
+            pg_insert(model)
+            .values(**values)
+            .on_conflict_do_nothing(index_elements=["source_event_key"])
+        )
+    except ImportError:
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+        return (
+            sqlite_insert(model)
+            .values(**values)
+            .on_conflict_do_nothing(index_elements=["source_event_key"])
+        )
+
+
 @router.post("/medbridge")
 async def medbridge_webhook(
     request: Request,
@@ -36,9 +55,16 @@ async def medbridge_webhook(
     body = await request.body()
     settings = request.app.state.settings
 
-    # HMAC signature verification
-    webhook_secret = getattr(settings, "medbridge_webhook_secret", "")
-    if webhook_secret and not verify_webhook_signature(body, x_signature, webhook_secret):
+    # HMAC signature verification — fail-closed when secret is configured
+    webhook_secret: str = getattr(settings, "medbridge_webhook_secret", "")
+    if settings.environment != "dev":
+        # Non-dev environments MUST have a webhook secret
+        if not webhook_secret:
+            raise HTTPException(status_code=500, detail="Webhook secret not configured")
+        if not verify_webhook_signature(body, x_signature, webhook_secret):
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    elif webhook_secret and not verify_webhook_signature(body, x_signature, webhook_secret):
+        # Dev: only verify if secret is set
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     payload: dict[str, Any] = await request.json()
@@ -71,14 +97,13 @@ async def medbridge_webhook(
 
     # Record processed event (idempotent)
     async with session_factory() as session, session.begin():
-        stmt = sqlite_insert(ProcessedEvent).values(
+        stmt = _insert_on_conflict_ignore(
+            ProcessedEvent,
             tenant_id=tenant_id,
             source_event_key=event_key,
             event_type=event_type,
         )
-        # ON CONFLICT DO NOTHING for idempotency
-        stmt = stmt.on_conflict_do_nothing(index_elements=["source_event_key"])
-        await session.execute(stmt)
+        await session.execute(stmt)  # type: ignore[arg-type]
 
     return {"status": "processed"}
 

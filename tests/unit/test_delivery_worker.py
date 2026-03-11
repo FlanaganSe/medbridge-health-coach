@@ -32,10 +32,32 @@ def _make_outbox_entry(
     return entry
 
 
+def _mock_session_factory() -> MagicMock:
+    """Create a mock session factory that supports async context managers."""
+    mock_result = MagicMock()
+    mock_result.rowcount = 0
+
+    mock_session = AsyncMock()
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    mock_begin = AsyncMock()
+    mock_begin.__aenter__ = AsyncMock(return_value=None)
+    mock_begin.__aexit__ = AsyncMock(return_value=False)
+    mock_session.begin = MagicMock(return_value=mock_begin)
+
+    mock_sf = MagicMock()
+    mock_ctx = AsyncMock()
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_sf.return_value = mock_ctx
+
+    return mock_sf
+
+
 @pytest.mark.asyncio
 async def test_delivery_worker_lifecycle() -> None:
     """Delivery worker starts and stops cleanly."""
-    session_factory = AsyncMock()
+    session_factory = _mock_session_factory()
     consent_service = FakeConsentService(logged_in=True, consented=True)
     notification = MockNotificationChannel()
     alert_channel = MockAlertChannel()
