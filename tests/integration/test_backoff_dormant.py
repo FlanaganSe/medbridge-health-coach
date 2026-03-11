@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from health_coach.agent.nodes.re_engaging import (
     _accumulate_backoff_job,
     _accumulate_patient_return,
@@ -85,10 +87,9 @@ def test_patient_return_schedules_followup() -> None:
     assert jobs[0]["job_type"] == "day_2_followup"
 
 
-def test_dormant_node_patient_returns() -> None:
+@pytest.mark.asyncio
+async def test_dormant_node_patient_returns() -> None:
     """Dormant node triggers patient_returned on patient invocation."""
-    import asyncio
-
     from health_coach.agent.nodes.dormant import dormant_node
 
     state = {
@@ -97,16 +98,15 @@ def test_dormant_node_patient_returns() -> None:
         "invocation_source": "patient",
         "pending_effects": {},
     }
-    result = asyncio.get_event_loop().run_until_complete(dormant_node(state))
+    result = await dormant_node(state)
 
     effects = result.get("pending_effects", {})
     assert effects.get("phase_event") == "patient_returned"
 
 
-def test_dormant_node_scheduler_noop() -> None:
+@pytest.mark.asyncio
+async def test_dormant_node_scheduler_noop() -> None:
     """Dormant node does nothing on scheduler invocation."""
-    import asyncio
-
     from health_coach.agent.nodes.dormant import dormant_node
 
     state = {
@@ -115,7 +115,7 @@ def test_dormant_node_scheduler_noop() -> None:
         "invocation_source": "scheduler",
         "pending_effects": {},
     }
-    result = asyncio.get_event_loop().run_until_complete(dormant_node(state))
+    result = await dormant_node(state)
 
     effects = result.get("pending_effects")
     assert effects is None  # No pending_effects set

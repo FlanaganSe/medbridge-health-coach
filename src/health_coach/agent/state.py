@@ -43,3 +43,4 @@ class PatientState(TypedDict, total=False):
     safety_retry_count: int
     last_outreach_at: str | None  # ISO datetime string
     last_patient_response_at: str | None  # ISO datetime string
+    _job_metadata: dict[str, object] | None  # Scheduler job metadata

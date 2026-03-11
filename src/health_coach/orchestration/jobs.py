@@ -110,6 +110,7 @@ class FollowupJobHandler:
                     "tenant_id": job.tenant_id,
                     "messages": [],
                     "invocation_source": "scheduler",
+                    "_job_metadata": job.metadata_ or {},
                 },
                 config={
                     "configurable": {

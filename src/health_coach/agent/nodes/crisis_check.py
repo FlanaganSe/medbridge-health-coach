@@ -69,9 +69,7 @@ async def crisis_check(
         # Fail-safe: escalate — a missed crisis is worse than a false alarm.
         # Accumulate a routine alert so clinicians are notified of the failure.
         current_effects = state.get("pending_effects") or {}
-        existing_alerts: list[dict[str, object]] = list(
-            current_effects.get("alerts", [])
-        )
+        existing_alerts: list[dict[str, object]] = list(current_effects.get("alerts", []))
         content_hash = hashlib.sha256(patient_text.encode()).hexdigest()[:16]
         existing_alerts.append(
             {

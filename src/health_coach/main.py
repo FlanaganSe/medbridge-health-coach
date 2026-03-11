@@ -131,6 +131,7 @@ async def _run_background_workers(
         engine=engine,  # type: ignore[arg-type]
         dispatcher=dispatcher,
         poll_interval_seconds=settings.scheduler_poll_interval_seconds,
+        coach_config=coach_config,
     )
 
     await logger.ainfo("background_workers_started")

@@ -124,6 +124,7 @@ async def _run_worker() -> None:
         engine=engine,
         dispatcher=dispatcher,
         poll_interval_seconds=settings.scheduler_poll_interval_seconds,
+        coach_config=coach_config,
     )
 
     shutdown_event = scheduler.shutdown_event

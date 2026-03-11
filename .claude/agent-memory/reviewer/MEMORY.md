@@ -11,6 +11,21 @@
 - The `ScheduledJob` partial index `ix_scheduled_jobs_pending` uses `postgresql_where` — this index does NOT exist in SQLite (partial indexes not supported). Tests that exercise this index path must be integration tests against PostgreSQL.
 - `conftest.py` engine fixture is `scope="session"` but does NOT call `Base.metadata.create_all` — the session-scoped engine fixture is shared but tables are NOT pre-created. Individual test modules that need tables must create them themselves (as `test_repositories.py` does with its own `db_engine` fixture).
 
+## Patterns Confirmed in M4
+
+- Crisis check → `_crisis_route` → `fallback_response` bypasses `safety_gate` entirely. The graph never sends a crisis message through the safety classifier.
+- `fallback_response` sets `"safety_decision": "fallback"` (raw string literal, not a `SafetyDecision` enum value). This is not reachable by `safety_route` but is a consistency trap.
+- `safety_gate` fail-safe correctly blocks (returns `CLINICAL_BOUNDARY`). Crisis check fail-safe incorrectly allows through (returns `crisis_detected=False` with no alert). These two nodes have opposite fail-safe policies.
+- `retry_generation` only returns the `HumanMessage` augmentation prompt in `messages`, not the LLM's response. Found in M4 review, not yet fixed.
+
+## Patterns Confirmed in M5
+
+- `_job_metadata` is NOT a field on `PatientState` — intended to carry `follow_up_day` from the scheduler job into the graph, but never wired. `state.get("_job_metadata")` always returns `None`. Bug found in M5 review, not yet fixed.
+- `sweep_missing_jobs` exists in `reconciliation.py` but is never called anywhere — dead code at runtime as of M5.
+- `MemorySaver` is used in the production worker — conversation history lost on worker restart. Should use `AsyncPostgresSaver` for postgres deployments, same conditional logic as `persistence/db.py`.
+- `session.add()` with a unique-constrained model does NOT do ON CONFLICT DO NOTHING — raises `IntegrityError` on duplicate. Use `insert(...).on_conflict_do_nothing()` explicitly when idempotency is required against concurrent writers.
+- `asyncio.get_event_loop().run_until_complete()` is deprecated in Python 3.12+. Tests should be `async def` with `asyncio_mode = "auto"`.
+
 ## Known Issues Found in M2
 
 - `FakeConsentService.reason` field in `check()` uses `self.allowed` (a property on the fake) — this is fine, not a bug.

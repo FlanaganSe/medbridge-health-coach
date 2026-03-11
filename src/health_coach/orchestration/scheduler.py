@@ -19,12 +19,14 @@ from health_coach.persistence.models import ScheduledJob
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+    from health_coach.domain.scheduling import CoachConfig
     from health_coach.orchestration.jobs import JobDispatcher
 
 logger = structlog.stdlib.get_logger()
 
 _DEFAULT_BATCH_SIZE = 10
 _JITTER_FRACTION = 0.2  # ±20% on poll interval
+_SWEEP_INTERVAL_POLLS = 20  # Run sweep every ~20 poll cycles (~10 min at 30s)
 
 
 class SchedulerWorker:
@@ -41,6 +43,7 @@ class SchedulerWorker:
         dispatcher: JobDispatcher,
         poll_interval_seconds: int = 30,
         batch_size: int = _DEFAULT_BATCH_SIZE,
+        coach_config: CoachConfig | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._engine = engine
@@ -48,6 +51,8 @@ class SchedulerWorker:
         self._poll_interval = poll_interval_seconds
         self._batch_size = batch_size
         self._shutdown_event = asyncio.Event()
+        self._coach_config = coach_config
+        self._poll_count = 0
 
     @property
     def shutdown_event(self) -> asyncio.Event:
@@ -65,6 +70,18 @@ class SchedulerWorker:
                     await logger.ainfo("scheduler_batch_processed", count=processed)
             except Exception:
                 logger.exception("scheduler_poll_error")
+
+            # Periodic sweep for missing jobs
+            self._poll_count += 1
+            if self._coach_config and self._poll_count % _SWEEP_INTERVAL_POLLS == 0:
+                try:
+                    from health_coach.orchestration.reconciliation import sweep_missing_jobs
+
+                    created = await sweep_missing_jobs(self._session_factory, self._coach_config)
+                    if created > 0:
+                        await logger.ainfo("scheduler_sweep_created_jobs", count=created)
+                except Exception:
+                    logger.exception("scheduler_sweep_error")
 
             # Jittered sleep
             jitter = self._poll_interval * random.uniform(  # noqa: S311

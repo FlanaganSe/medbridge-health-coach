@@ -166,7 +166,7 @@ def _accumulate_followup_job(
     # Determine which follow-up day is next based on metadata
     # Default to day_2 if not specified
     metadata = state.get("_job_metadata") or {}
-    current_day = metadata.get("follow_up_day", 2)
+    current_day: int = int(metadata.get("follow_up_day", 2))  # type: ignore[arg-type]
     next_day = _NEXT_FOLLOWUP.get(f"day_{current_day}_followup")
 
     if next_day is None:

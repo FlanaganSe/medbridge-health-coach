@@ -4,13 +4,18 @@
 - Periodic sweep: finds patients missing expected scheduled jobs
 """
 
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportAttributeAccessIssue=false
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import insert, select, update
 
 from health_coach.domain.phases import PatientPhase
 from health_coach.domain.scheduling import add_jitter, calculate_send_time
@@ -57,8 +62,8 @@ async def sweep_missing_jobs(
     - ACTIVE patients with no pending follow-up → create next follow-up
     - ONBOARDING patients with no pending timeout → create timeout job
 
-    Returns the number of jobs created. Uses ON CONFLICT DO NOTHING for
-    idempotency (stable keys prevent duplicates).
+    Uses INSERT ... ON CONFLICT DO NOTHING for idempotency.
+    Returns the number of jobs created.
     """
     created = 0
     now = datetime.now(UTC)
@@ -77,17 +82,21 @@ async def sweep_missing_jobs(
             send_time = add_jitter(send_time, coach_config.max_jitter_minutes)
             idempotency_key = f"{pid}:reconciliation_followup:{now.date().isoformat()}"
 
-            session.add(
-                ScheduledJob(
+            result = await session.execute(
+                insert(ScheduledJob)
+                .values(
                     tenant_id=patient.tenant_id,
                     patient_id=patient.id,
                     job_type="day_2_followup",
                     idempotency_key=idempotency_key,
                     scheduled_at=send_time,
                     metadata_={"source": "reconciliation", "follow_up_day": 2},
+                    status="pending",
                 )
+                .on_conflict_do_nothing(index_elements=["idempotency_key"])
             )
-            created += 1
+            if result.rowcount > 0:  # type: ignore[operator]
+                created += 1
 
         # Find ONBOARDING patients with no pending timeout job
         onboarding_patients = await _patients_without_pending_jobs(
@@ -98,20 +107,23 @@ async def sweep_missing_jobs(
             timeout_at = patient.created_at + timedelta(
                 hours=coach_config.onboarding_timeout_hours
             )
-            # Only create if timeout hasn't already passed (reconciliation
-            # will catch it next sweep if it has)
             idempotency_key = f"{pid}:onboarding_timeout"
-            session.add(
-                ScheduledJob(
+
+            result = await session.execute(
+                insert(ScheduledJob)
+                .values(
                     tenant_id=patient.tenant_id,
                     patient_id=patient.id,
                     job_type="onboarding_timeout",
                     idempotency_key=idempotency_key,
                     scheduled_at=timeout_at,
                     metadata_={"source": "reconciliation"},
+                    status="pending",
                 )
+                .on_conflict_do_nothing(index_elements=["idempotency_key"])
             )
-            created += 1
+            if result.rowcount > 0:  # type: ignore[operator]
+                created += 1
 
     if created > 0:
         await logger.ainfo("reconciliation_jobs_created", count=created)
@@ -124,7 +136,6 @@ async def _patients_without_pending_jobs(
     phase: str,
 ) -> list[Patient]:
     """Find patients in a given phase with no pending scheduled jobs."""
-    # Subquery: patients who DO have pending jobs
     has_pending = (
         select(ScheduledJob.patient_id)
         .where(ScheduledJob.status == "pending")
