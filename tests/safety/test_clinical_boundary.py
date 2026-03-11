@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from health_coach.agent.nodes.fallback import fallback_response
-from health_coach.domain.safety import (
+from health_ally.agent.nodes.fallback import fallback_response
+from health_ally.domain.safety import (
     CLINICAL_REDIRECT_MESSAGE,
     CRISIS_RESPONSE_MESSAGE,
     SAFE_FALLBACK_MESSAGE,
 )
-from health_coach.domain.safety_types import SafetyDecision
+from health_ally.domain.safety_types import SafetyDecision
 
 if TYPE_CHECKING:
-    from health_coach.agent.state import PatientState
+    from health_ally.agent.state import PatientState
 
 
 async def test_fallback_crisis_message() -> None:

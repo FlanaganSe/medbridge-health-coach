@@ -1,13 +1,13 @@
 # Intended Use Statement
 
-**Product:** MedBridge AI Health Coach
+**Product:** Health Ally
 **Version:** MVP (v0.1.0)
 **Date:** 2026-03-10
 **Status:** Internal — controlled launch
 
 ## Purpose
 
-The MedBridge AI Health Coach is an AI-powered accountability partner designed to proactively engage patients in their home exercise program (HEP) adherence through the MedBridge Go patient application.
+Health Ally is an AI-powered accountability partner designed to proactively engage patients in their home exercise program (HEP) adherence through the MedBridge Go patient application.
 
 ## Intended Users
 
@@ -18,15 +18,15 @@ The MedBridge AI Health Coach is an AI-powered accountability partner designed t
 
 ## Intended Use
 
-The Health Coach:
+Health Ally:
 1. **Onboards** patients by establishing exercise-related goals through guided conversation
 2. **Follows up** on Day 2, 5, and 7 post-onboarding to check exercise adherence
 3. **Re-engages** patients who stop responding using a graduated backoff sequence
 4. **Escalates** to clinicians when patients show signs of crisis or sustained disengagement
 
-## Boundaries — What the Coach Does NOT Do
+## Boundaries — What Health Ally Does NOT Do
 
-The Health Coach is explicitly NOT intended to:
+Health Ally is explicitly NOT intended to:
 
 1. **Provide clinical advice** — The coach must not offer guidance on symptoms, medication, diagnosis, treatment plans, or exercise modifications. All clinical questions are redirected to the care team.
 

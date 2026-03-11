@@ -1,4 +1,4 @@
-# MedBridge Health Coach
+# Health Ally
 
 AI-powered accountability partner that proactively engages patients in home exercise program (HEP) adherence through the MedBridge Go mobile app. Guides patients through onboarding, goal-setting, and scheduled follow-ups via multi-turn conversations while enforcing strict clinical safety boundaries.
 
@@ -61,7 +61,7 @@ PENDING → ONBOARDING → ACTIVE → RE_ENGAGING → DORMANT
 ## Project Structure
 
 ```
-src/health_coach/
+src/health_ally/
 ├── agent/              # LangGraph graph, nodes, tools, prompts
 │   ├── graph.py        # StateGraph compilation
 │   ├── state.py        # PatientState TypedDict
@@ -108,7 +108,7 @@ cp .env.example .env
 uv run alembic upgrade head
 
 # Start the service (API + background workers)
-uv run python -m health_coach
+uv run python -m health_ally
 ```
 
 The service starts at `http://localhost:8000` with SQLite by default. Set `DATABASE_URL` to a PostgreSQL connection string for full functionality (scheduled jobs require `SKIP LOCKED`).
@@ -120,7 +120,7 @@ The service starts at `http://localhost:8000` with SQLite by default. Set `DATAB
 docker compose up
 
 # Build image only
-docker build -t health-coach .
+docker build -t health-ally .
 ```
 
 ### Modes
@@ -128,9 +128,9 @@ docker build -t health-coach .
 The service supports three run modes via `--mode`:
 
 ```bash
-uv run python -m health_coach --mode api      # HTTP API only
-uv run python -m health_coach --mode worker   # Background workers only
-uv run python -m health_coach --mode all      # Both (default)
+uv run python -m health_ally --mode api      # HTTP API only
+uv run python -m health_ally --mode worker   # Background workers only
+uv run python -m health_ally --mode all      # Both (default)
 ```
 
 ## Development
@@ -156,14 +156,14 @@ pytest tests/evals/
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `sqlite+aiosqlite:///./health_coach.db` | Database connection |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./health_ally.db` | Database connection |
 | `ANTHROPIC_API_KEY` | — | Required for LLM calls |
 | `ENVIRONMENT` | `dev` | `dev` / `staging` / `prod` |
 | `DEFAULT_MODEL` | `claude-sonnet-4-6` | Primary LLM model |
 | `SAFETY_CLASSIFIER_MODEL` | `claude-haiku-4-5-20251001` | Safety classifier model |
 | `APP_MODE` | `all` | `api` / `worker` / `all` |
 
-See `src/health_coach/settings.py` for the full configuration reference.
+See `src/health_ally/settings.py` for the full configuration reference.
 
 ## API
 

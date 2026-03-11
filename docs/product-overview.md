@@ -2,7 +2,7 @@
 
 ## What this is
 
-MedBridge Health Coach is an AI-powered accountability partner that proactively engages patients in home exercise program (HEP) adherence through the MedBridge Go patient mobile app. It guides patients through onboarding, goal-setting, and scheduled follow-ups via multi-turn conversations — while enforcing strict safety boundaries: no clinical advice, crisis detection with clinician escalation, and per-interaction consent verification.
+Health Ally is an AI-powered accountability partner that proactively engages patients in home exercise program (HEP) adherence through the MedBridge Go patient mobile app. It guides patients through onboarding, goal-setting, and scheduled follow-ups via multi-turn conversations — while enforcing strict safety boundaries: no clinical advice, crisis detection with clinician escalation, and per-interaction consent verification.
 
 **The problem it solves:** Healthcare providers prescribe home exercise programs, but adherence is notoriously low — patients fall off when they don't feel supported between visits. Clinicians are stretched too thin for regular motivational check-ins with every patient. This system automates the accountability layer: warm, consistent, proactive coaching that stays strictly within non-clinical boundaries.
 
@@ -38,7 +38,7 @@ MedBridge Health Coach is an AI-powered accountability partner that proactively 
 | **Hypothesis** | Property-based testing | RuleBasedStateMachine for exhaustive phase machine verification |
 | **Ruff** | Lint + format | Single tool replacing flake8 + isort + black, 10-100x faster |
 | **pyright** | Type checking | Strict mode on `src/`, relaxed on `tests/` — catches type errors without test annotation overhead |
-| **Docker** | Containerization | Multi-stage build (builder + runtime), `python:3.12-slim` base |
+| **Docker** | Containerization | 3-stage build (python builder → node ui-builder → python runtime), `python:3.12-slim` base |
 | **Railway** | Deployment | PaaS with Dockerfile support, health check integration, environment variable management |
 
 ### Key tradeoffs
@@ -160,7 +160,7 @@ The app runs in three modes via `--mode` flag:
 ```
 alembic upgrade head                    # 1. Run database migrations
 python -c '...run_bootstrap(Settings())' # 2. Create LangGraph checkpoint tables
-python -m health_coach                   # 3. Start app (api + workers)
+python -m health_ally                   # 3. Start app (api + workers)
 ```
 
 ---
@@ -168,7 +168,7 @@ python -m health_coach                   # 3. Start app (api + workers)
 ## Directory structure
 
 ```
-src/health_coach/
+src/health_ally/
   __main__.py              # CLI entry point (--mode api|worker|all, --host, --port)
   main.py                  # FastAPI app factory, lifespan (pools, workers), route registration
   settings.py              # Pydantic BaseSettings — all config via env vars / .env file
@@ -210,7 +210,7 @@ src/health_coach/
       webhooks.py          # POST /webhooks/medbridge — HMAC, dedup, event routing
       state.py             # GET /v1/patients/{id}/{phase|goals|alerts|safety-decisions}
       health.py            # GET /health/{live|ready} — liveness + readiness probes
-      demo.py              # POST /v1/demo/{seed-patient|trigger-followup|reset-patient}
+      demo.py              # POST /v1/demo/{seed-patient|trigger-followup|reset-patient}, GET audit-events|scheduled-jobs
     middleware/
       logging.py           # RequestLoggingMiddleware — pure ASGI (not BaseHTTPMiddleware)
     dependencies.py        # get_auth_context() — X-Patient-ID / X-Tenant-ID headers
@@ -251,7 +251,7 @@ src/health_coach/
 
 tests/                     # Mirrors src/ structure
   conftest.py              # Session-scoped engine, per-test session, mock_session helper
-  unit/                    # 179 tests — SQLite, FakeModelGateway, no external deps
+  unit/                    # ~180 tests — SQLite, FakeModelGateway, no external deps
   integration/             # Graph routing, thread persistence, endpoint tests
   safety/                  # Crisis detection and clinical boundary routing
   contract/                # Webhook HMAC verification
@@ -259,7 +259,7 @@ tests/                     # Mirrors src/ structure
     conftest.py            # DEEPEVAL_TELEMETRY_OPT_OUT=1, skip-if-no-API-key
 
 alembic/                   # Single initial migration (all 12 tables)
-demo-ui/                   # React 19 + Vite — chat, controls panel, observability sidebar
+demo-ui/                   # React 19 + Vite + Tailwind v4 — chat, pipeline viz, observability (see Demo UI section)
 docs/                      # ADRs, PHI data flow, release runbook, intended use, this file
 ```
 
@@ -457,6 +457,7 @@ Both pools are created in the FastAPI lifespan and independently disposed on shu
 | `POST` | `/v1/demo/trigger-followup/{id}` | Set earliest pending job to `scheduled_at=now()` |
 | `POST` | `/v1/demo/reset-patient/{id}` | Reset to PENDING, delete goals/jobs/outbox |
 | `GET` | `/v1/demo/scheduled-jobs/{id}` | List all scheduled jobs for patient |
+| `GET` | `/v1/demo/audit-events/{id}` | List audit events for patient (newest first, limit 100) |
 
 Demo endpoints are gated behind `settings.environment == "dev"` in `main.py` — never registered in staging or production.
 
@@ -604,7 +605,7 @@ System prompts are dynamically built based on context:
 
 | Category | Count | Backend | External deps | Default run |
 |---|---|---|---|---|
-| Unit | 179 | SQLite in-memory | None | Yes |
+| Unit | ~180 | SQLite in-memory | None | Yes |
 | Integration | 28 | SQLite in-memory | None | Yes |
 | Safety | 8 | None (pure logic) | None | Yes |
 | Contract | 3 | None | None | Yes |
@@ -679,7 +680,7 @@ Pure ASGI middleware (not `BaseHTTPMiddleware` — which buffers SSE responses).
 
 ## Important decisions and tradeoffs
 
-Full ADR log: `docs/decisions.md` (ADR-001 through ADR-008). Key highlights:
+Full ADR log: `docs/decisions.md` (ADR-001 through ADR-011). Key highlights:
 
 **Single StateGraph, no subgraphs (ADR-001).** Five phases don't justify subgraph complexity. Migration to subgraphs post-production changes the LangGraph checkpoint namespace scheme, requiring checkpoint migration — a HIPAA change-management event because blobs contain PHI.
 
@@ -696,6 +697,12 @@ Full ADR log: `docs/decisions.md` (ADR-001 through ADR-008). Key highlights:
 **PHI scrubbing as last processor (ADR-007).** Must run after `format_exc_info` — otherwise exception tracebacks can re-introduce PHI that was already scrubbed from fields.
 
 **Code cleanup patterns (ADR-008).** Extracted `accumulate_effect()`, `create_coach_context()`, channel factories, pure ASGI middleware. Eliminated 3 identical context factory closures, 8 copy-pasted effect accumulation blocks, and 4 identical mock session helpers.
+
+**Same-origin demo UI serving (ADR-009).** The Vite build output is bundled into the Docker image and served via Starlette `StaticFiles(html=True)` at `/`. Eliminates CORS entirely. API routes registered before the mount take priority. No `aiofiles` needed (Starlette uses `anyio` since 0.21.0).
+
+**Dormant node gated on LLM success (ADR-010).** Phase transition DORMANT → RE_ENGAGING is only accumulated after a successful `coach_model.ainvoke()`. On LLM failure, the patient stays in DORMANT so the next attempt can succeed — prevents silent state corruption with no reply.
+
+**Demo UI overhaul (ADR-011).** Full rewrite from ~750 LOC inline-styled React to 2,400+ LOC Tailwind CSS v4 implementation. SSE parser extracts full node data (pipeline, tools, safety), event-driven state refresh replaces 2s polling, tool call-result pairing uses `tool_call_id`.
 
 ---
 
@@ -735,10 +742,61 @@ See `docs/phi-data-flow.md` for the complete PHI data flow diagram. Summary:
 
 ## Demo UI
 
-React 19 + Vite (`demo-ui/`), dev/staging only. Three panels:
+React 19 + Vite + Tailwind CSS v4 (`demo-ui/`), dev/staging only. Bundled into the Docker image and served at `/` via Starlette `StaticFiles(html=True)` (ADR-009).
 
-1. **Chat** — SSE streaming from `/v1/chat`. Custom line-buffered SSE parser handles chunk boundaries. Extracts `outbound_message` from node state updates.
-2. **Demo Controls** — Seed patient, trigger follow-up, reset patient, view scheduled jobs. Color-coded job status.
-3. **Observability Sidebar** — Polls phase, goals, alerts, safety decisions every 2 seconds. Color-coded phase badge.
+### Layout
 
-Patient selection dropdown with fixed demo UUIDs. No authentication (internal-only).
+Three horizontal layers — **TopBar** → **DemoControlBar** → **MainBody** (ChatPanel + ObservabilityPanel side-by-side):
+
+1. **TopBar** — Health Ally branding (Space Grotesk), "DEMO MODE" label, patient selector dropdown with fixed demo UUIDs.
+2. **DemoControlBar** — Flask icon + 4 action buttons: Seed Patient, Run Next Check-in (renamed from "Trigger Follow-up" for clarity — it sets the earliest pending `ScheduledJob.scheduled_at` to now), Reset Patient (with confirmation dialog), Refresh. Status messages shown in amber bar.
+3. **ChatPanel** — Full SSE streaming chat:
+   - **Three message types:** bot bubble (blue avatar, gray bg), user bubble (dark bg, white text), tool call card (amber bg, wrench icon, JetBrains Mono `Tool: {name}` label).
+   - **Pipeline trace** — horizontal strip above messages showing graph nodes completing in real-time during streaming: running (blue pulse) → complete (green check). Collapses after stream completes; re-expands on next message.
+   - **Progressive streaming render** — text appears as SSE chunks arrive, with bouncing-dot typing indicator.
+   - **Safety toast** — slide-in toast (top-right) when safety classification fires. Shows decision label + confidence score. Auto-dismisses after 5s.
+4. **ObservabilityPanel** — 420px fixed-width sidebar with 5 sections:
+   - Phase (PhaseBadge with dot + color-coded label per phase)
+   - Goals (CircleCheck icon, goal_text, confirmed_at date)
+   - Alerts (AlertBadge/RoutineBadge, reason text, timestamp)
+   - Safety Decisions (SafetyBadge dynamic by decision type, source, confidence score, "+N more" after 5)
+   - Scheduled Jobs (job_type in monospace, timestamp, attempts/max_attempts, JobStatusBadge)
+
+### Architecture
+
+- **Design tokens** — Tailwind CSS v4 `@theme` directive in `index.css` with full color palette, font families (Space Grotesk, Inter, JetBrains Mono), and CSS animations.
+- **Typed API client** (`api.ts`) — Generic `request<T>()` fetcher with `ApiError` class. Typed wrappers for all endpoints.
+- **`useSSE` hook** — Line-buffered SSE parser that extracts ALL node data from each `stream_mode="updates"` event: pipeline progression, outbound_message (progressive render), safety decisions (with confidence from `pending_effects`), and tool calls (paired by `tool_call_id` for multi-tool correctness). Returns `SSEResult` with messages, pipelineNodes, safetyDecision, error.
+- **`usePatientState` hook** — Event-driven state refresh replaces the old 2s polling (which produced 8 req/s). SSE `done` event triggers an immediate fetch via `refresh()` callback; 10s fallback interval catches scheduler-driven changes. Per-launch cancellation token prevents stale patient data from overwriting new patient state on rapid patient switches.
+- **Reusable components** — `Badge.tsx` (PhaseBadge, AlertBadge, RoutineBadge, SafetyBadge, JobStatusBadge), `Button.tsx` (primary/secondary/danger variants), `ConfirmDialog.tsx` (accessible modal with `role="dialog"`, `aria-modal`, escape-to-close).
+
+### File structure
+
+```
+demo-ui/src/
+  App.tsx                        # Layout shell, patient state management
+  api.ts                         # Typed API client for all endpoints
+  types.ts                       # TypeScript types (Phase, ChatMessage, ToolCallInfo, etc.)
+  index.css                      # Tailwind imports + design tokens + animations
+  main.tsx                       # React entry point
+  hooks/
+    useSSE.ts                    # SSE parser + streaming state management
+    usePatientState.ts           # Event-driven sidebar state refresh
+  components/
+    TopBar.tsx                   # Health Ally branding + patient selector
+    DemoControlBar.tsx           # Demo action buttons + status bar
+    ChatPanel.tsx                # Chat header + messages + input + safety toast
+    ChatMessage.tsx              # Bot/user/tool message variants
+    PipelineTrace.tsx            # Real-time graph node visualization
+    ObservabilityPanel.tsx       # Sidebar: phase, goals, alerts, safety, jobs
+    SafetyToast.tsx              # Slide-in safety classification notification
+    ui/Badge.tsx                 # PhaseBadge, AlertBadge, SafetyBadge, etc.
+    ui/Button.tsx                # Primary/secondary button with icon support
+    ui/ConfirmDialog.tsx         # Accessible confirmation modal
+```
+
+### Known limitations
+
+- **Checkpoint clearing on reset is not implemented** — the LangGraph checkpointer is not on `app.state`; clearing it would require refactoring to expose a delete API. Conversation history persists after reset.
+- **Audit events not yet connected** — backend endpoint exists (`GET /v1/demo/audit-events/{id}`), types exist, but no UI section renders them.
+- **No client-side routing** — `StaticFiles(html=True)` serves `index.html` for directories only. If react-router is ever added, replace with a `SpaStaticFiles` subclass (override `lookup_path`).

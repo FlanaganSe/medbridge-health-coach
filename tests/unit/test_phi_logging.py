@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from health_coach.observability.logging import scrub_phi_fields
+from health_ally.observability.logging import scrub_phi_fields
 
 
 def test_scrub_known_phi_fields() -> None:

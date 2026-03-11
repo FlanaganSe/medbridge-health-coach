@@ -1,10 +1,10 @@
-# MedBridge Health Coach
+# Health Ally
 
 AI-powered accountability partner that proactively engages patients through onboarding, goal-setting, and follow-up via LangGraph agent architecture.
 
 ## Commands
 ```bash
-uv run python -m health_coach   # Run the service
+uv run python -m health_ally   # Run the service
 pytest                           # Unit tests
 pytest --cov                     # Tests with coverage
 ruff check . && ruff format --check .  # Lint + format check

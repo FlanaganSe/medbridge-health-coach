@@ -6,8 +6,8 @@ import uuid
 
 from langchain_core.messages import HumanMessage
 
-from health_coach.agent.nodes.crisis_check import crisis_check
-from health_coach.domain.safety_types import (
+from health_ally.agent.nodes.crisis_check import crisis_check
+from health_ally.domain.safety_types import (
     ClassifierOutput,
     CrisisLevel,
     SafetyDecision,
@@ -18,10 +18,10 @@ def _make_config(*, classifier_output: ClassifierOutput | None = None) -> dict: 
     """Build a minimal config for crisis_check tests."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from health_coach.agent.context import CoachContext
-    from health_coach.domain.consent import FakeConsentService
-    from health_coach.domain.scheduling import CoachConfig
-    from health_coach.integrations.model_gateway import FakeModelGateway
+    from health_ally.agent.context import CoachContext
+    from health_ally.domain.consent import FakeConsentService
+    from health_ally.domain.scheduling import CoachConfig
+    from health_ally.integrations.model_gateway import FakeModelGateway
 
     mock_session = AsyncMock()
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)

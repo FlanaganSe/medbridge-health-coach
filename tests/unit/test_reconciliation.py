@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-from health_coach.orchestration.reconciliation import startup_recovery
+from health_ally.orchestration.reconciliation import startup_recovery
 
 
 async def test_startup_recovery_resets_processing_jobs() -> None:

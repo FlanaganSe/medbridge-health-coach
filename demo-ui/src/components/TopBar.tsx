@@ -21,12 +21,11 @@ export function TopBar({
       {/* Left: branding */}
       <div className="flex items-center gap-4">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-red">
-          <span className="text-[13px] font-bold text-white">M</span>
+          <span className="text-[13px] font-bold text-white">H</span>
         </div>
         <span className="font-heading text-lg font-semibold text-text-primary">
-          MedBridge
+          Health Ally
         </span>
-        <span className="text-sm text-text-secondary">Health Coach</span>
       </div>
 
       {/* Right: demo label + patient selector */}

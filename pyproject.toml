@@ -1,7 +1,7 @@
 [project]
-name = "health-coach"
+name = "health-ally"
 version = "0.1.0"
-description = "AI-powered health coaching service for MedBridge"
+description = "AI-powered exercise accountability partner"
 requires-python = ">=3.12"
 dependencies = [
     "langgraph>=1.1.0",
@@ -41,7 +41,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/health_coach"]
+packages = ["src/health_ally"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -64,8 +64,8 @@ select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "RET", "RUF", "N", "ANN", 
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "ANN", "S106"]
-"src/health_coach/persistence/models.py" = ["TC003", "RUF012"]
-"src/health_coach/persistence/schemas/*.py" = ["TC003"]
+"src/health_ally/persistence/models.py" = ["TC003", "RUF012"]
+"src/health_ally/persistence/schemas/*.py" = ["TC003"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["health_coach"]
+known-first-party = ["health_ally"]

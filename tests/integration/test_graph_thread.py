@@ -7,11 +7,11 @@ import uuid
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
-from health_coach.agent.context import CoachContext
-from health_coach.agent.graph import compile_graph
-from health_coach.domain.consent import FakeConsentService
-from health_coach.domain.scheduling import CoachConfig
-from health_coach.integrations.model_gateway import FakeModelGateway
+from health_ally.agent.context import CoachContext
+from health_ally.agent.graph import compile_graph
+from health_ally.domain.consent import FakeConsentService
+from health_ally.domain.scheduling import CoachConfig
+from health_ally.integrations.model_gateway import FakeModelGateway
 from tests.conftest import make_mock_session
 
 

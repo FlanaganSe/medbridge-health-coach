@@ -5,9 +5,9 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from health_coach.persistence.models import AuditEvent, Base, Patient
-from health_coach.persistence.repositories.audit import AuditRepository
-from health_coach.persistence.repositories.patient import PatientRepository
+from health_ally.persistence.models import AuditEvent, Base, Patient
+from health_ally.persistence.repositories.audit import AuditRepository
+from health_ally.persistence.repositories.patient import PatientRepository
 
 
 @pytest.fixture

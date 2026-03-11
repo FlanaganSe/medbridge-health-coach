@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from health_coach.agent.nodes.re_engaging import (
+from health_ally.agent.nodes.re_engaging import (
     _accumulate_backoff_job,
     _accumulate_patient_return,
     _handle_dormant_transition,
 )
-from health_coach.domain.scheduling import CoachConfig
+from health_ally.domain.scheduling import CoachConfig
 
 
 def test_handle_dormant_transition_sets_phase_event() -> None:
@@ -91,8 +91,8 @@ def _make_dormant_config() -> dict:  # type: ignore[type-arg]
     """Build a minimal LangGraph config for dormant_node tests."""
     from unittest.mock import MagicMock
 
-    from health_coach.agent.context import CoachContext
-    from health_coach.integrations.model_gateway import FakeModelGateway
+    from health_ally.agent.context import CoachContext
+    from health_ally.integrations.model_gateway import FakeModelGateway
 
     ctx = CoachContext(
         session_factory=MagicMock(),  # type: ignore[arg-type]
@@ -108,7 +108,7 @@ def _make_dormant_config() -> dict:  # type: ignore[type-arg]
 @pytest.mark.asyncio
 async def test_dormant_node_patient_returns() -> None:
     """Dormant node triggers patient_returned on patient invocation."""
-    from health_coach.agent.nodes.dormant import dormant_node
+    from health_ally.agent.nodes.dormant import dormant_node
 
     state = {
         "patient_id": "p1",
@@ -129,7 +129,7 @@ async def test_dormant_node_patient_returns() -> None:
 @pytest.mark.asyncio
 async def test_dormant_node_scheduler_noop() -> None:
     """Dormant node does nothing on scheduler invocation."""
-    from health_coach.agent.nodes.dormant import dormant_node
+    from health_ally.agent.nodes.dormant import dormant_node
 
     state = {
         "patient_id": "p1",

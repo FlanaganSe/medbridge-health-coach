@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from health_coach.orchestration.jobs import JobDispatcher, OnboardingTimeoutHandler
+from health_ally.orchestration.jobs import JobDispatcher, OnboardingTimeoutHandler
 
 
 def _make_job(
@@ -99,7 +99,7 @@ async def test_onboarding_timeout_skips_non_onboarding() -> None:
     engine.url = "sqlite:///test.db"  # Skip advisory lock
 
     with patch(
-        "health_coach.orchestration.jobs.patient_advisory_lock",
+        "health_ally.orchestration.jobs.patient_advisory_lock",
         return_value=AsyncMock(),
     ) as mock_lock:
         mock_lock.return_value.__aenter__ = AsyncMock(return_value=None)

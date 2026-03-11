@@ -9,15 +9,15 @@ import pytest
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
-from health_coach.agent.context import CoachContext
-from health_coach.agent.graph import compile_graph
-from health_coach.agent.nodes.pending import WELCOME_MESSAGE
-from health_coach.domain.consent import FakeConsentService
-from health_coach.domain.scheduling import CoachConfig
-from health_coach.integrations.model_gateway import FakeModelGateway
+from health_ally.agent.context import CoachContext
+from health_ally.agent.graph import compile_graph
+from health_ally.agent.nodes.pending import WELCOME_MESSAGE
+from health_ally.domain.consent import FakeConsentService
+from health_ally.domain.scheduling import CoachConfig
+from health_ally.integrations.model_gateway import FakeModelGateway
 
 if TYPE_CHECKING:
-    from health_coach.agent.state import PatientState
+    from health_ally.agent.state import PatientState
 
 
 def _make_ctx(
@@ -254,8 +254,8 @@ async def test_crisis_detected_routes_to_fallback(graph) -> None:  # type: ignor
 
 async def test_phase_router_all_phases(graph) -> None:  # type: ignore[no-untyped-def]
     """All 5 phases route to the correct node."""
-    from health_coach.agent.nodes.router import phase_router
-    from health_coach.domain.phases import PatientPhase
+    from health_ally.agent.nodes.router import phase_router
+    from health_ally.domain.phases import PatientPhase
 
     expected = {
         PatientPhase.PENDING: "pending_node",

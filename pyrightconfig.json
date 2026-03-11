@@ -1,5 +1,5 @@
 {
-  "include": ["src/health_coach", "tests"],
+  "include": ["src/health_ally", "tests"],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.12",
   "venvPath": ".",

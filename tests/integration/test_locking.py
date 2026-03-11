@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from health_coach.persistence.locking import _patient_lock_key
+from health_ally.persistence.locking import _patient_lock_key
 
 
 def test_lock_key_deterministic() -> None:

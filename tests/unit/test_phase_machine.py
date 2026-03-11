@@ -8,14 +8,14 @@ import pytest
 from hypothesis import settings
 from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, precondition, rule
 
-from health_coach.domain.errors import PhaseTransitionError
-from health_coach.domain.phase_machine import (
+from health_ally.domain.errors import PhaseTransitionError
+from health_ally.domain.phase_machine import (
     _TRANSITIONS,
     VALID_EVENTS,
     is_valid_transition,
     transition,
 )
-from health_coach.domain.phases import PatientPhase
+from health_ally.domain.phases import PatientPhase
 
 # --- Valid transitions ---
 

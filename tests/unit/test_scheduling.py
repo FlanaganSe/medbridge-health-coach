@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
-from health_coach.domain.scheduling import (
+from health_ally.domain.scheduling import (
     CoachConfig,
     add_jitter,
     calculate_send_time,

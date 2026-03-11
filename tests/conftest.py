@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from health_coach.main import create_app
-from health_coach.persistence.db import create_session_factory
-from health_coach.persistence.models import Base
-from health_coach.settings import Settings
+from health_ally.main import create_app
+from health_ally.persistence.db import create_session_factory
+from health_ally.persistence.models import Base
+from health_ally.settings import Settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator

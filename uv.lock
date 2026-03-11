@@ -636,7 +636,7 @@ wheels = [
 ]
 
 [[package]]
-name = "health-coach"
+name = "health-ally"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

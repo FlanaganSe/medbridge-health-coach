@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from health_coach.integrations.alert_channel import MockAlertChannel
-from health_coach.integrations.notification import (
+from health_ally.integrations.alert_channel import MockAlertChannel
+from health_ally.integrations.notification import (
     DeliveryResult,
     MockNotificationChannel,
 )

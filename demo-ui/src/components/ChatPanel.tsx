@@ -84,7 +84,7 @@ export function ChatPanel({
           </div>
           <div>
             <div className="font-heading text-[15px] font-semibold text-text-primary">
-              Health Coach
+              Health Ally
             </div>
             <div className="text-xs text-text-secondary">
               AI-powered coaching assistant

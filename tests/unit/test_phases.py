@@ -1,6 +1,6 @@
 """Tests for PatientPhase enum."""
 
-from health_coach.domain.phases import PatientPhase
+from health_ally.domain.phases import PatientPhase
 
 
 def test_all_phases_exist() -> None:

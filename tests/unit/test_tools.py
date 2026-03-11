@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from health_coach.agent.tools.adherence import get_adherence_summary
-from health_coach.agent.tools.clinician import alert_clinician
-from health_coach.agent.tools.goal import get_program_summary, set_goal
-from health_coach.agent.tools.reminder import set_reminder
+from health_ally.agent.tools.adherence import get_adherence_summary
+from health_ally.agent.tools.clinician import alert_clinician
+from health_ally.agent.tools.goal import get_program_summary, set_goal
+from health_ally.agent.tools.reminder import set_reminder
 
 
 def test_set_goal_llm_schema() -> None:

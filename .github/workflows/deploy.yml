@@ -79,18 +79,18 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: health_coach
+          POSTGRES_USER: health_ally
           POSTGRES_PASSWORD: password
-          POSTGRES_DB: health_coach_deploy
+          POSTGRES_DB: health_ally_deploy
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U health_coach"
+          --health-cmd "pg_isready -U health_ally"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg://health_coach:password@localhost:5432/health_coach_deploy
+      DATABASE_URL: postgresql+psycopg://health_ally:password@localhost:5432/health_ally_deploy
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7

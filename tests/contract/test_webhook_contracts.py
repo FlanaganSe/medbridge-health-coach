@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from health_coach.integrations.medbridge import verify_webhook_signature
+from health_ally.integrations.medbridge import verify_webhook_signature
 
 
 def test_webhook_signature_valid() -> None:

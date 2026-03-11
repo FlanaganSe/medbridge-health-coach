@@ -2,7 +2,7 @@
 
 import pytest
 
-from health_coach.domain.consent import (
+from health_ally.domain.consent import (
     ConsentResult,
     FailSafeConsentService,
     FakeConsentService,

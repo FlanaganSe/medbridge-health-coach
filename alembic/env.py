@@ -9,7 +9,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from health_coach.settings import Settings
+from health_ally.settings import Settings
 
 # Alembic Config object
 config = context.config
@@ -18,7 +18,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models so autogenerate can detect them
-from health_coach.persistence.models import Base  # noqa: E402
+from health_ally.persistence.models import Base  # noqa: E402
 
 target_metadata = Base.metadata
 
@@ -29,7 +29,7 @@ def get_url() -> str:
         settings = Settings()
         return settings.database_url
     except Exception:
-        return config.get_main_option("sqlalchemy.url", "sqlite+aiosqlite:///./health_coach.db")
+        return config.get_main_option("sqlalchemy.url", "sqlite+aiosqlite:///./health_ally.db")
 
 
 def run_migrations_offline() -> None:

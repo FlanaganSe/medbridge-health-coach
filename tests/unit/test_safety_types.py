@@ -1,6 +1,6 @@
 """Tests for safety types."""
 
-from health_coach.domain.safety_types import (
+from health_ally.domain.safety_types import (
     ClassifierOutput,
     CrisisLevel,
     SafetyDecision,

@@ -1,0 +1,263 @@
+// Health Coach Agent — LangGraph Architecture
+// Render: dot -Tsvg docs/architecture.dot -o docs/architecture.svg
+
+digraph HealthCoach {
+    // ── Global styling ──────────────────────────────────────────────
+    rankdir=TB
+    bgcolor="#FAFBFC"
+    fontname="Helvetica Neue"
+    fontsize=11
+    pad=0.5
+    nodesep=0.5
+    ranksep=0.65
+    splines=true
+    compound=true
+    newrank=true
+
+    node [
+        fontname="Helvetica Neue"
+        fontsize=10
+        style="filled,rounded"
+        shape=box
+        color="#D1D5DB"
+        fillcolor="#FFFFFF"
+        penwidth=1.2
+        margin="0.15,0.08"
+    ]
+
+    edge [
+        fontname="Helvetica Neue"
+        fontsize=8
+        color="#9CA3AF"
+        arrowsize=0.65
+        penwidth=1.0
+    ]
+
+    // ── Terminal nodes ──────────────────────────────────────────────
+    START [
+        label="START"
+        shape=circle
+        width=0.55
+        fixedsize=true
+        fillcolor="#10B981"
+        fontcolor=white
+        fontsize=9
+        color="#059669"
+        penwidth=2
+    ]
+
+    END [
+        label="END"
+        shape=doublecircle
+        width=0.55
+        fixedsize=true
+        fillcolor="#6B7280"
+        fontcolor=white
+        fontsize=9
+        color="#4B5563"
+        penwidth=2
+    ]
+
+    // ── Cluster: Ingestion Pipeline ─────────────────────────────────
+    subgraph cluster_ingestion {
+        label=<<b>Ingestion Pipeline</b>>
+        labeljust=l
+        style="rounded,dashed"
+        color="#93C5FD"
+        bgcolor="#EFF6FF"
+        fontsize=10
+        fontcolor="#1E40AF"
+        penwidth=1.5
+        margin=16
+
+        consent_gate [
+            label="Consent Gate"
+            fillcolor="#DBEAFE"
+            color="#3B82F6"
+        ]
+        load_patient_context [
+            label="Load Patient Context"
+            fillcolor="#DBEAFE"
+            color="#3B82F6"
+        ]
+        crisis_check [
+            label="Crisis Check"
+            fillcolor="#FEE2E2"
+            color="#EF4444"
+        ]
+        manage_history [
+            label="Manage History\n+ Phase Router"
+            fillcolor="#DBEAFE"
+            color="#3B82F6"
+        ]
+
+        consent_gate -> load_patient_context [label="allowed"]
+        load_patient_context -> crisis_check
+        crisis_check -> manage_history [label="safe"]
+    }
+
+    // ── Cluster: Phase Agents ───────────────────────────────────────
+    subgraph cluster_phases {
+        label=<<b>Phase Agents</b>>
+        labeljust=l
+        style="rounded,dashed"
+        color="#A78BFA"
+        bgcolor="#F5F3FF"
+        fontsize=10
+        fontcolor="#5B21B6"
+        penwidth=1.5
+        margin=16
+
+        pending_node [
+            label="Pending\n(template)"
+            fillcolor="#EDE9FE"
+            color="#8B5CF6"
+            style="filled,rounded,dashed"
+        ]
+        dormant_node [
+            label="Dormant"
+            fillcolor="#EDE9FE"
+            color="#8B5CF6"
+            style="filled,rounded,dashed"
+        ]
+        onboarding_agent [
+            label="Onboarding\nAgent (LLM)"
+            fillcolor="#EDE9FE"
+            color="#8B5CF6"
+        ]
+        active_agent [
+            label="Active\nAgent (LLM)"
+            fillcolor="#EDE9FE"
+            color="#8B5CF6"
+        ]
+        reengagement_agent [
+            label="Re-engagement\nAgent (LLM)"
+            fillcolor="#EDE9FE"
+            color="#8B5CF6"
+        ]
+
+        {rank=same; pending_node; dormant_node; onboarding_agent; active_agent; reengagement_agent}
+    }
+
+    // ── Tool Node (standalone) ──────────────────────────────────────
+    subgraph cluster_tools {
+        label=<<b>Tool Execution</b>>
+        labeljust=l
+        style="rounded,dashed"
+        color="#FBBF24"
+        bgcolor="#FFFBEB"
+        fontsize=10
+        fontcolor="#92400E"
+        penwidth=1.5
+        margin=16
+
+        tool_node [
+            label=<<b>Tool Node</b><br/><font point-size="8">set_goal  |  set_reminder  |  get_adherence<br/>get_program  |  alert_clinician</font>>
+            fillcolor="#FEF3C7"
+            color="#F59E0B"
+        ]
+    }
+
+    // ── Cluster: Safety Pipeline ────────────────────────────────────
+    subgraph cluster_safety {
+        label=<<b>Safety Pipeline</b>>
+        labeljust=l
+        style="rounded,dashed"
+        color="#F87171"
+        bgcolor="#FEF2F2"
+        fontsize=10
+        fontcolor="#991B1B"
+        penwidth=1.5
+        margin=16
+
+        safety_gate [
+            label="Safety Gate\n(classifier)"
+            fillcolor="#FEE2E2"
+            color="#EF4444"
+        ]
+        retry_generation [
+            label="Retry\nGeneration"
+            fillcolor="#FEE2E2"
+            color="#EF4444"
+        ]
+        fallback_response [
+            label="Fallback\nResponse"
+            fillcolor="#FEE2E2"
+            color="#EF4444"
+        ]
+
+        {rank=same; retry_generation; fallback_response}
+    }
+
+    // ── Save (Persistence) ──────────────────────────────────────────
+    save_patient_context [
+        label="Save Patient Context"
+        fillcolor="#D1FAE5"
+        color="#10B981"
+        penwidth=1.5
+    ]
+
+    // ════════════════════════════════════════════════════════════════
+    // EDGES
+    // ════════════════════════════════════════════════════════════════
+
+    // ── Entry ───────────────────────────────────────────────────────
+    START -> consent_gate
+
+    // ── Consent denied → END ────────────────────────────────────────
+    consent_gate -> END [
+        label="denied"
+        style=dashed
+        color="#EF4444"
+        fontcolor="#EF4444"
+        constraint=false
+    ]
+
+    // ── Crisis → Fallback ───────────────────────────────────────────
+    crisis_check -> fallback_response [
+        label="crisis!"
+        style=dashed
+        color="#EF4444"
+        fontcolor="#EF4444"
+        constraint=false
+    ]
+
+    // ── Phase routing (from manage_history) ─────────────────────────
+    manage_history -> pending_node [label="PENDING" fontcolor="#7C3AED"]
+    manage_history -> dormant_node [label="DORMANT" fontcolor="#7C3AED"]
+    manage_history -> onboarding_agent [label="ONBOARDING" fontcolor="#7C3AED"]
+    manage_history -> active_agent [label="ACTIVE" fontcolor="#7C3AED"]
+    manage_history -> reengagement_agent [label="RE_ENGAGING" fontcolor="#7C3AED"]
+
+    // ── Simple phase paths → save ───────────────────────────────────
+    pending_node -> save_patient_context [label="template"]
+    dormant_node -> save_patient_context [label="no-op" style=dashed]
+
+    // ── Dormant with message → safety ───────────────────────────────
+    dormant_node -> safety_gate [label="has msg"]
+
+    // ── Agent → Tool loop ───────────────────────────────────────────
+    onboarding_agent -> tool_node [label="tool call" color="#D97706" fontcolor="#92400E"]
+    active_agent -> tool_node [label="tool call" color="#D97706" fontcolor="#92400E"]
+    reengagement_agent -> tool_node [label="tool call" color="#D97706" fontcolor="#92400E"]
+
+    tool_node -> onboarding_agent [color="#D97706" style=dashed]
+    tool_node -> active_agent [color="#D97706" style=dashed]
+    tool_node -> reengagement_agent [color="#D97706" style=dashed]
+
+    // ── Agent done → Safety ─────────────────────────────────────────
+    onboarding_agent -> safety_gate [label="done"]
+    active_agent -> safety_gate [label="done"]
+    reengagement_agent -> safety_gate [label="done"]
+
+    // ── Safety pipeline ─────────────────────────────────────────────
+    safety_gate -> save_patient_context [label="pass" color="#10B981" fontcolor="#065F46"]
+    safety_gate -> retry_generation [label="retry" color="#D97706" fontcolor="#92400E"]
+    safety_gate -> fallback_response [label="fail" color="#EF4444" fontcolor="#EF4444"]
+
+    retry_generation -> safety_gate [label="re-check" style=dashed color="#D97706"]
+    fallback_response -> save_patient_context
+
+    // ── Exit ────────────────────────────────────────────────────────
+    save_patient_context -> END
+}

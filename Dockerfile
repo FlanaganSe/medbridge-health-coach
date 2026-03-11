@@ -45,4 +45,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["python", "-m", "health_coach"]
+CMD ["python", "-m", "health_ally"]

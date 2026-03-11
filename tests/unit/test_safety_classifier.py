@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from health_coach.agent.nodes.safety import safety_route
-from health_coach.domain.safety_types import SafetyDecision
+from health_ally.agent.nodes.safety import safety_route
+from health_ally.domain.safety_types import SafetyDecision
 
 if TYPE_CHECKING:
-    from health_coach.agent.state import PatientState
+    from health_ally.agent.state import PatientState
 
 
 def test_safety_route_safe() -> None:

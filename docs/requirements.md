@@ -1,4 +1,4 @@
-# AI Health Coach
+# Health Ally
 
 **Status:** Active
 **Category:** AI Solution

@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document maps where Protected Health Information (PHI) enters, flows through, and exits the MedBridge Health Coach system. It satisfies PRD AC-13 (PHI-safe logging) and supports HIPAA compliance review.
+This document maps where Protected Health Information (PHI) enters, flows through, and exits the Health Ally system. It satisfies PRD AC-13 (PHI-safe logging) and supports HIPAA compliance review.
 
 ## PHI Classification
 

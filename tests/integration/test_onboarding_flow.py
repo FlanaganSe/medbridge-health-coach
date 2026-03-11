@@ -8,17 +8,17 @@ from unittest.mock import MagicMock
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
-from health_coach.agent.context import CoachContext
-from health_coach.agent.graph import compile_graph
-from health_coach.domain.consent import FakeConsentService
-from health_coach.domain.safety import CLINICAL_REDIRECT_MESSAGE, CRISIS_RESPONSE_MESSAGE
-from health_coach.domain.safety_types import (
+from health_ally.agent.context import CoachContext
+from health_ally.agent.graph import compile_graph
+from health_ally.domain.consent import FakeConsentService
+from health_ally.domain.safety import CLINICAL_REDIRECT_MESSAGE, CRISIS_RESPONSE_MESSAGE
+from health_ally.domain.safety_types import (
     ClassifierOutput,
     CrisisLevel,
     SafetyDecision,
 )
-from health_coach.domain.scheduling import CoachConfig
-from health_coach.integrations.model_gateway import FakeModelGateway
+from health_ally.domain.scheduling import CoachConfig
+from health_ally.integrations.model_gateway import FakeModelGateway
 from tests.conftest import make_mock_session
 
 
@@ -138,7 +138,7 @@ async def test_crisis_triggers_988_response() -> None:
 
 def test_set_goal_triggers_phase_event() -> None:
     """set_goal tool includes goal_confirmed phase_event in pending_effects."""
-    from health_coach.agent.tools.goal import set_goal
+    from health_ally.agent.tools.goal import set_goal
 
     state = {
         "patient_id": "p1",

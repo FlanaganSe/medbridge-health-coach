@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from health_coach.domain.backoff import next_backoff_delay, should_transition_to_dormant
+from health_ally.domain.backoff import next_backoff_delay, should_transition_to_dormant
 
 
 def test_backoff_first_attempt() -> None:

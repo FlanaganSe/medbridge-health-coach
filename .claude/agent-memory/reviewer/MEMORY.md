@@ -1,4 +1,4 @@
-# Reviewer Agent Memory — MedBridge Health Coach
+# Reviewer Agent Memory — Health Ally
 
 ## Project Patterns Confirmed
 

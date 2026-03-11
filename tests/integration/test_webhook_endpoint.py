@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from health_coach.main import create_app
-from health_coach.settings import Settings
+from health_ally.main import create_app
+from health_ally.settings import Settings
 
 if TYPE_CHECKING:
     from fastapi import FastAPI

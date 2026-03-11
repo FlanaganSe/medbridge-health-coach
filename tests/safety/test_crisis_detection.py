@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from health_coach.domain.safety_types import (
+from health_ally.domain.safety_types import (
     ClassifierOutput,
     CrisisLevel,
     SafetyDecision,

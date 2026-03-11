@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from health_coach.orchestration.scheduler import SchedulerWorker
+from health_ally.orchestration.scheduler import SchedulerWorker
 
 
 async def test_scheduler_stops_on_shutdown() -> None:

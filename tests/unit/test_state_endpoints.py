@@ -8,15 +8,15 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from health_coach.main import create_app
-from health_coach.persistence.models import (
+from health_ally.main import create_app
+from health_ally.persistence.models import (
     Base,
     ClinicianAlert,
     Patient,
     PatientGoal,
     SafetyDecisionRecord,
 )
-from health_coach.settings import Settings
+from health_ally.settings import Settings
 
 TENANT = "test-tenant"
 

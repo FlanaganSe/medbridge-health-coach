@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from health_coach.domain.consent import FakeConsentService
-from health_coach.integrations.alert_channel import MockAlertChannel
-from health_coach.integrations.notification import MockNotificationChannel
-from health_coach.orchestration.delivery_worker import DeliveryWorker
+from health_ally.domain.consent import FakeConsentService
+from health_ally.integrations.alert_channel import MockAlertChannel
+from health_ally.integrations.notification import MockNotificationChannel
+from health_ally.orchestration.delivery_worker import DeliveryWorker
 
 
 def _make_outbox_entry(

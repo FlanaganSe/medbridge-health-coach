@@ -1,6 +1,6 @@
 """Tests for application settings."""
 
-from health_coach.settings import Settings
+from health_ally.settings import Settings
 
 
 def test_default_settings() -> None:
