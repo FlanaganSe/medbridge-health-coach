@@ -1,8 +1,6 @@
 name: LLM Evals
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
