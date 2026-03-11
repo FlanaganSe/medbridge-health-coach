@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,9 +11,12 @@ from httpx import ASGITransport, AsyncClient
 from health_coach.main import create_app
 from health_coach.settings import Settings
 
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 
 @pytest.fixture
-def app() -> MagicMock:
+def app() -> FastAPI:
     """Create a test app with mocked dependencies."""
     settings = Settings(app_mode="api")
     app = create_app(settings)
@@ -41,7 +45,7 @@ def app() -> MagicMock:
 
 
 @pytest.mark.asyncio
-async def test_webhook_missing_fields(app: MagicMock) -> None:
+async def test_webhook_missing_fields(app: FastAPI) -> None:
     """Webhook returns 400 for missing required fields."""
     transport = ASGITransport(app=app)  # type: ignore[arg-type]
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -54,7 +58,7 @@ async def test_webhook_missing_fields(app: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_webhook_processes_event(app: MagicMock) -> None:
+async def test_webhook_processes_event(app: FastAPI) -> None:
     """Webhook processes valid events."""
     transport = ASGITransport(app=app)  # type: ignore[arg-type]
     async with AsyncClient(transport=transport, base_url="http://test") as client:

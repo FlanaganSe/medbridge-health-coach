@@ -1381,6 +1381,15 @@ Create a compliance checklist mapping each PRD §5.2 guardrail to its implementa
 **Research ref:** PRD §5.2, §5.6
 **Verify:** Manual review + all tests pass
 
+### M7 Milestones
+
+- [x] Step 7.1 — PHI-safe logging: `scrub_phi_fields` processor + `docs/phi-data-flow.md` → verify: `ruff check . && pyright . && pytest tests/unit/test_phi_logging.py -v`
+- [x] Step 7.2 — LLM evaluation suite: DeepEval `GEval` tests + `eval.yml` CI → verify: `pytest tests/evals/ --collect-only`
+- [x] Step 7.3 — Property-based testing: Hypothesis `RuleBasedStateMachine` for phase machine → verify: `pytest tests/unit/test_phase_machine.py -v`
+- [x] Step 7.4 — Deployment workflow: `deploy.yml` + `docs/release-runbook.md` → verify: manual review
+- [x] Step 7.5 — Compliance artifacts: `docs/intended-use.md` + AC traceability → verify: manual review + all tests pass
+Commit: "feat: M7 release hardening — PHI logging, evals, property tests, deploy, compliance"
+
 ### M7 Exit Gate
 - PHI-safe logging verified across codebase
 - LLM evaluation suite passing with acceptable scores

@@ -50,6 +50,8 @@ asyncio_default_fixture_loop_scope = "session"
 markers = [
     "integration: marks tests requiring PostgreSQL",
 ]
+# Exclude evals from default test run — they require LLM API keys
+addopts = "--ignore=tests/evals"
 
 [tool.ruff]
 target-version = "py312"
