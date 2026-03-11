@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class PatientCreate(BaseModel):
@@ -14,6 +15,17 @@ class PatientCreate(BaseModel):
     tenant_id: str
     external_patient_id: str
     timezone: str = "America/New_York"
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, v: str) -> str:
+        """Validate IANA timezone string."""
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, KeyError) as err:
+            msg = f"Invalid IANA timezone: {v}"
+            raise ValueError(msg) from err
+        return v
 
 
 class PatientRead(BaseModel):

@@ -7,9 +7,7 @@
       "Bash(pytest *)",
       "Bash(uv *)",
       "Bash(ruff *)",
-      "Bash(mypy *)"
-    ],
-    "ask": [
+      "Bash(mypy *)",
       "Edit",
       "Write",
       "Bash(git add *)",
@@ -17,6 +15,8 @@
       "Bash(pip install *)",
       "Bash(curl *)",
       "Bash(cd *)"
+    ],
+    "ask": [
     ],
     "deny": [
       "Read(**/.env*)",

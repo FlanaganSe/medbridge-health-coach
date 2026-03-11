@@ -72,10 +72,10 @@ class Patient(Base):
     )
 
     goals: WriteOnlyMapped[list[PatientGoal]] = relationship(
-        back_populates="patient", lazy="raise"
+        back_populates="patient",
     )
     consent_snapshots: WriteOnlyMapped[list[PatientConsentSnapshot]] = relationship(
-        back_populates="patient", lazy="raise"
+        back_populates="patient",
     )
 
     __table_args__ = (
@@ -185,7 +185,7 @@ class OutboxEntry(Base):
     )
 
     delivery_attempts: WriteOnlyMapped[list[DeliveryAttempt]] = relationship(
-        back_populates="outbox_entry", lazy="raise"
+        back_populates="outbox_entry",
     )
 
 
