@@ -66,8 +66,25 @@ async def crisis_check(
         )
     except Exception:
         logger.exception("crisis_check_classifier_error", patient_id=patient_id)
-        # Fail-safe: treat as no crisis (classifier failure should not block)
-        return {"crisis_detected": False}
+        # Fail-safe: escalate — a missed crisis is worse than a false alarm.
+        # Accumulate a routine alert so clinicians are notified of the failure.
+        current_effects = state.get("pending_effects") or {}
+        existing_alerts: list[dict[str, object]] = list(
+            current_effects.get("alerts", [])
+        )
+        content_hash = hashlib.sha256(patient_text.encode()).hexdigest()[:16]
+        existing_alerts.append(
+            {
+                "reason": "Crisis classifier failed — manual review recommended",
+                "priority": "urgent",
+                "idempotency_key": f"{patient_id}:crisis_error:{content_hash}",
+            }
+        )
+        updated_effects = {**current_effects, "alerts": existing_alerts}
+        return {
+            "crisis_detected": False,
+            "pending_effects": updated_effects,
+        }
 
     logger.info(
         "crisis_check_result",

@@ -132,3 +132,37 @@ async def test_crisis_check_empty_messages() -> None:
         _make_config(),
     )
     assert result["crisis_detected"] is False
+
+
+async def test_crisis_check_classifier_error_creates_alert() -> None:
+    """Classifier error creates urgent alert for manual review."""
+    from unittest.mock import MagicMock, patch
+
+    config = _make_config()
+    ctx = config["configurable"]["ctx"]
+
+    # Make the classifier model raise on ainvoke
+    broken_structured = MagicMock()
+    broken_structured.ainvoke = MagicMock(side_effect=RuntimeError("API down"))
+    broken_classifier = MagicMock()
+    broken_classifier.with_structured_output = MagicMock(return_value=broken_structured)
+
+    with patch.object(ctx.model_gateway, "get_chat_model", return_value=broken_classifier):
+        result = await crisis_check(
+            {
+                "patient_id": str(uuid.uuid4()),
+                "tenant_id": "t1",
+                "invocation_source": "patient",
+                "messages": [HumanMessage(content="I want to hurt myself")],
+            },
+            config,
+        )
+
+    # Should not flag as crisis_detected (avoid blocking on classifier failure)
+    # but MUST create an urgent alert for manual review
+    assert result["crisis_detected"] is False
+    effects = result.get("pending_effects", {})
+    alerts = effects.get("alerts", [])
+    assert len(alerts) == 1
+    assert alerts[0]["priority"] == "urgent"
+    assert "manual review" in alerts[0]["reason"].lower()
