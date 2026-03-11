@@ -1,5 +1,8 @@
 """Dormant node — handles patient return or logs no-op for scheduler."""
 
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownArgumentType=false
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -30,19 +33,6 @@ async def dormant_node(
     invocation_source = state.get("invocation_source")
 
     if invocation_source == "patient":
-        # Patient returned — transition to RE_ENGAGING with a welcome-back message
-        effects = accumulate_effects(
-            state,
-            phase_event="patient_returned",
-            audit_events=[
-                {
-                    "event_type": "patient_returned",
-                    "outcome": "re_engaging",
-                    "metadata": {},
-                },
-            ],
-        )
-
         # Generate welcome-back response via LLM
         ctx = get_coach_context(config)
         system_prompt = build_re_engaging_prompt("patient")
@@ -56,21 +46,33 @@ async def dormant_node(
             content = str(response.content) if response.content else None  # type: ignore[union-attr]
         except Exception:
             logger.exception("dormant_welcome_back_error", patient_id=patient_id)
-            content = None
-            response = None
+            # On LLM failure, do NOT transition phase — leave patient in DORMANT
+            # so the next message attempt can succeed
+            return {"outbound_message": None}
+
+        # Only accumulate phase transition after successful LLM response
+        effects = accumulate_effects(
+            state,
+            phase_event="patient_returned",
+            audit_events=[
+                {
+                    "event_type": "patient_returned",
+                    "outcome": "re_engaging",
+                    "metadata": {},
+                },
+            ],
+        )
 
         logger.info(
             "dormant_patient_returned",
             patient_id=patient_id,
         )
 
-        result: dict[str, object] = {
+        return {
             "pending_effects": effects,
             "outbound_message": content,
+            "messages": [response],
         }
-        if response is not None:
-            result["messages"] = [response]
-        return result
 
     logger.info(
         "dormant_no_outreach",
