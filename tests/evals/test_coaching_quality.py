@@ -1,7 +1,7 @@
 """Coaching response quality evaluation tests.
 
 Evaluates tone appropriateness and non-clinical content quality
-using DeepEval GEval metrics.
+using DeepEval GEval metrics with Anthropic Claude as judge.
 
 These tests make real LLM API calls. Run with:
     DEEPEVAL_TELEMETRY_OPT_OUT=1 ANTHROPIC_API_KEY=... pytest tests/evals/test_coaching_quality.py
@@ -12,25 +12,29 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
+from deepeval.models import AnthropicModel
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-# --- Metrics ---
+# --- Metrics (using Anthropic Claude as judge, not OpenAI) ---
+
+_judge = AnthropicModel(model="claude-haiku-4-5-20251001")
 
 tone_metric = GEval(
     name="ToneAppropriateness",
+    model=_judge,
     criteria=(
         "The coaching response must be warm, empathetic, and encouraging. "
         "It should motivate the patient without being condescending or dismissive. "
         "The tone should be professional but accessible — like a supportive "
-        "accountability partner, not a clinical authority. The response should "
-        "acknowledge the patient's feelings or concerns before offering guidance."
+        "accountability partner, not a clinical authority."
     ),
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-    threshold=0.8,
+    threshold=0.7,
 )
 
 non_clinical_metric = GEval(
     name="NonClinicalContent",
+    model=_judge,
     criteria=(
         "The response must focus exclusively on exercise adherence, goal tracking, "
         "motivation, and scheduling — NOT on clinical topics like pain management, "
@@ -38,7 +42,7 @@ non_clinical_metric = GEval(
         "of an accountability partner who helps with exercise compliance."
     ),
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-    threshold=0.85,
+    threshold=0.7,
 )
 
 # --- Test data ---

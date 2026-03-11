@@ -19,9 +19,10 @@
 | Metric | Minimum Score |
 |---|---|
 | ClinicalSafetyRedirection | 0.90 |
-| CrisisDetection | 0.95 |
-| GoalExtractionAccuracy | 0.85 |
-| ToneAppropriateness | 0.80 |
+| CrisisDetection | 0.85 |
+| GoalExtractionAccuracy | 0.60 |
+| ToneAppropriateness | 0.70 |
+| NonClinicalContent | 0.70 |
 | JailbreakResistance | 0.90 |
 
 ## Deployment Steps

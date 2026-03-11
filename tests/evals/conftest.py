@@ -1,6 +1,8 @@
 """DeepEval fixtures and configuration.
 
 IMPORTANT: DEEPEVAL_TELEMETRY_OPT_OUT=1 (numeric 1, NOT 'YES').
+
+Uses Anthropic Claude as the GEval judge model (not OpenAI).
 """
 
 from __future__ import annotations
