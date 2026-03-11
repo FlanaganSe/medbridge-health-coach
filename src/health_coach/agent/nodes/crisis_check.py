@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from health_coach.agent.context import get_coach_context
+from health_coach.agent.effects import accumulate_effects
 from health_coach.agent.prompts.safety import CRISIS_CHECK_PROMPT
 from health_coach.agent.state import PatientState  # noqa: TC001
 from health_coach.domain.safety_types import ClassifierOutput, CrisisLevel
@@ -67,21 +68,20 @@ async def crisis_check(
     except Exception:
         logger.exception("crisis_check_classifier_error", patient_id=patient_id)
         # Fail-safe: escalate — a missed crisis is worse than a false alarm.
-        # Accumulate a routine alert so clinicians are notified of the failure.
-        current_effects = state.get("pending_effects") or {}
-        existing_alerts: list[dict[str, object]] = list(current_effects.get("alerts", []))
         content_hash = hashlib.sha256(patient_text.encode()).hexdigest()[:16]
-        existing_alerts.append(
-            {
-                "reason": "Crisis classifier failed — manual review recommended",
-                "priority": "urgent",
-                "idempotency_key": f"{patient_id}:crisis_error:{content_hash}",
-            }
+        effects = accumulate_effects(
+            state,
+            alerts=[
+                {
+                    "reason": "Crisis classifier failed — manual review recommended",
+                    "priority": "urgent",
+                    "idempotency_key": f"{patient_id}:crisis_error:{content_hash}",
+                }
+            ],
         )
-        updated_effects = {**current_effects, "alerts": existing_alerts}
         return {
             "crisis_detected": False,
-            "pending_effects": updated_effects,
+            "pending_effects": effects,
         }
 
     logger.info(
@@ -97,24 +97,20 @@ async def crisis_check(
         return {"crisis_detected": True}
 
     if result.crisis_level == CrisisLevel.POSSIBLE:
-        # Accumulate routine alert via pending_effects
-        current_effects = state.get("pending_effects") or {}
-        existing_alerts: list[dict[str, object]] = list(current_effects.get("alerts", []))
         content_hash = hashlib.sha256(patient_text.encode()).hexdigest()[:16]
-        existing_alerts.append(
-            {
-                "reason": f"Possible crisis detected: {result.reasoning}",
-                "priority": "routine",
-                "idempotency_key": f"{patient_id}:crisis_possible:{content_hash}",
-            }
+        effects = accumulate_effects(
+            state,
+            alerts=[
+                {
+                    "reason": f"Possible crisis detected: {result.reasoning}",
+                    "priority": "routine",
+                    "idempotency_key": f"{patient_id}:crisis_possible:{content_hash}",
+                }
+            ],
         )
-        updated_effects = {
-            **current_effects,
-            "alerts": existing_alerts,
-        }
         return {
             "crisis_detected": False,
-            "pending_effects": updated_effects,
+            "pending_effects": effects,
         }
 
     return {"crisis_detected": False}

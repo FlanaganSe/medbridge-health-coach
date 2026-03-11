@@ -14,12 +14,13 @@ import structlog
 from langchain_core.messages import AIMessage
 
 from health_coach.agent.context import get_coach_context
+from health_coach.agent.effects import accumulate_effects
 from health_coach.agent.prompts.re_engaging import build_re_engaging_prompt
 from health_coach.agent.state import PatientState  # noqa: TC001
 from health_coach.agent.tools.adherence import get_adherence_summary
 from health_coach.agent.tools.goal import get_program_summary, set_goal
 from health_coach.domain.backoff import next_backoff_delay, should_transition_to_dormant
-from health_coach.domain.scheduling import add_jitter, calculate_send_time
+from health_coach.domain.scheduling import CoachConfig, add_jitter, calculate_send_time
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
@@ -61,9 +62,7 @@ async def reengagement_agent(
 
         # Not yet dormant — send re-engagement message and schedule next
         result = await _generate_re_engaging_message(state, config)
-        effects = _accumulate_backoff_job(state, unanswered, ctx.coach_config)
-        if effects:
-            result["pending_effects"] = effects
+        result["pending_effects"] = _accumulate_backoff_job(state, unanswered, ctx.coach_config)
         result["unanswered_count"] = unanswered
         return result
 
@@ -109,17 +108,14 @@ def _handle_dormant_transition(
     unanswered: int,
 ) -> dict[str, object]:
     """Handle transition to DORMANT after max unanswered messages."""
-    current_effects: PendingEffects = state.get("pending_effects") or {}
     patient_id = state["patient_id"]
-
     content_hash = hashlib.sha256(f"{patient_id}:dormant".encode()).hexdigest()[:16]
     idempotency_key = f"{patient_id}:missed_third:{content_hash}"
 
-    updated_effects: PendingEffects = {
-        **current_effects,  # type: ignore[typeddict-item]
-        "phase_event": "missed_third_message",
-        "alerts": [
-            *current_effects.get("alerts", []),
+    effects = accumulate_effects(
+        state,
+        phase_event="missed_third_message",
+        alerts=[
             {
                 "reason": (
                     f"Patient unresponsive after {unanswered} outreach "
@@ -129,21 +125,19 @@ def _handle_dormant_transition(
                 "idempotency_key": idempotency_key,
             },
         ],
-        "audit_events": [
-            *current_effects.get("audit_events", []),
+        audit_events=[
             {
                 "event_type": "dormant_transition",
                 "outcome": "dormant",
                 "metadata": {"unanswered_count": unanswered},
             },
         ],
-    }
+    )
 
     return {
         "unanswered_count": unanswered,
-        "pending_effects": updated_effects,
+        "pending_effects": effects,
         "outbound_message": None,
-        # Empty AIMessage so tools_condition can inspect without error
         "messages": [AIMessage(content="")],
     }
 
@@ -151,15 +145,9 @@ def _handle_dormant_transition(
 def _accumulate_backoff_job(
     state: PatientState,
     unanswered: int,
-    coach_config: object,
-) -> PendingEffects | None:
+    coach_config: CoachConfig,
+) -> PendingEffects:
     """Accumulate the next backoff follow-up job."""
-    from health_coach.domain.scheduling import CoachConfig
-
-    if not isinstance(coach_config, CoachConfig):
-        return None
-
-    current_effects: PendingEffects = state.get("pending_effects") or {}
     patient_id = state["patient_id"]
 
     delay = next_backoff_delay(unanswered, coach_config.backoff_base_days)
@@ -177,71 +165,57 @@ def _accumulate_backoff_job(
     content_hash = hashlib.sha256(f"{patient_id}:backoff:{unanswered}".encode()).hexdigest()[:16]
     idempotency_key = f"{patient_id}:backoff_followup:{content_hash}"
 
-    existing_jobs: list[dict[str, object]] = list(current_effects.get("scheduled_jobs", []))
-    existing_jobs.append(
-        {
-            "job_type": "backoff_followup",
-            "idempotency_key": idempotency_key,
-            "scheduled_at": send_time,
-            "metadata": {"unanswered_count": unanswered},
-        }
+    return accumulate_effects(
+        state,
+        scheduled_jobs=[
+            {
+                "job_type": "backoff_followup",
+                "idempotency_key": idempotency_key,
+                "scheduled_at": send_time,
+                "metadata": {"unanswered_count": unanswered},
+            }
+        ],
     )
-
-    return {
-        **current_effects,  # type: ignore[typeddict-item]
-        "scheduled_jobs": existing_jobs,
-    }
 
 
 def _accumulate_patient_return(
     state: PatientState,
-    coach_config: object,
+    coach_config: CoachConfig,
 ) -> PendingEffects:
     """Accumulate effects for patient return: phase transition + new follow-up."""
-    from health_coach.domain.scheduling import CoachConfig
+    from datetime import timedelta
 
-    current_effects: PendingEffects = state.get("pending_effects") or {}
     patient_id = state["patient_id"]
 
-    effects: PendingEffects = {
-        **current_effects,  # type: ignore[typeddict-item]
-        "phase_event": "patient_responded",
-        "audit_events": [
-            *current_effects.get("audit_events", []),
+    now = datetime.now(UTC)
+    base_time = now + timedelta(days=coach_config.follow_up_days[0])
+    send_time = calculate_send_time(
+        base_time,
+        "America/New_York",
+        coach_config.quiet_hours_start,
+        coach_config.quiet_hours_end,
+    )
+    send_time = add_jitter(send_time, coach_config.max_jitter_minutes)
+
+    content_hash = hashlib.sha256(f"{patient_id}:return_followup".encode()).hexdigest()[:16]
+    idempotency_key = f"{patient_id}:return_followup:{content_hash}"
+
+    return accumulate_effects(
+        state,
+        phase_event="patient_responded",
+        audit_events=[
             {
                 "event_type": "patient_returned",
                 "outcome": "active",
                 "metadata": {},
             },
         ],
-    }
-
-    # Schedule new follow-up cadence if config available
-    if isinstance(coach_config, CoachConfig):
-        from datetime import timedelta
-
-        now = datetime.now(UTC)
-        base_time = now + timedelta(days=coach_config.follow_up_days[0])
-        send_time = calculate_send_time(
-            base_time,
-            "America/New_York",
-            coach_config.quiet_hours_start,
-            coach_config.quiet_hours_end,
-        )
-        send_time = add_jitter(send_time, coach_config.max_jitter_minutes)
-
-        content_hash = hashlib.sha256(f"{patient_id}:return_followup".encode()).hexdigest()[:16]
-        idempotency_key = f"{patient_id}:return_followup:{content_hash}"
-
-        existing_jobs: list[dict[str, object]] = list(effects.get("scheduled_jobs", []))
-        existing_jobs.append(
+        scheduled_jobs=[
             {
                 "job_type": "day_2_followup",
                 "idempotency_key": idempotency_key,
                 "scheduled_at": send_time,
                 "metadata": {"follow_up_day": 2, "source": "re_engagement"},
             }
-        )
-        effects["scheduled_jobs"] = existing_jobs
-
-    return effects
+        ],
+    )

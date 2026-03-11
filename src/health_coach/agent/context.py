@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langchain_core.runnables import RunnableConfig
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -13,6 +15,10 @@ if TYPE_CHECKING:
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.model_gateway import ModelGateway
     from health_coach.settings import Settings
+
+    #: Factory type: takes (session_factory, engine) → CoachContext.
+    #: Used by FollowupJobHandler and background workers.
+    type ContextFactory = Callable[[async_sessionmaker[AsyncSession], AsyncEngine], CoachContext]
 
 
 @dataclass
@@ -35,3 +41,31 @@ def get_coach_context(config: RunnableConfig) -> CoachContext:
     """Extract CoachContext from a LangGraph RunnableConfig."""
     ctx: CoachContext = config["configurable"]["ctx"]  # type: ignore[typeddict-item]
     return ctx
+
+
+def create_context_factory(
+    *,
+    consent_service: ConsentService,
+    settings: Settings,
+    coach_config: CoachConfig,
+    model_gateway: ModelGateway,
+) -> ContextFactory:
+    """Create a typed factory that builds CoachContext for a given session/engine pair.
+
+    Replaces the 3 identical inline closures in main.py and __main__.py.
+    """
+
+    def factory(
+        session_factory: async_sessionmaker[AsyncSession],
+        engine: AsyncEngine,
+    ) -> CoachContext:
+        return CoachContext(
+            session_factory=session_factory,
+            engine=engine,
+            consent_service=consent_service,
+            settings=settings,
+            coach_config=coach_config,
+            model_gateway=model_gateway,
+        )
+
+    return factory

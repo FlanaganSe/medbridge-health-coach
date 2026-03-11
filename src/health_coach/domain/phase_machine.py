@@ -44,3 +44,15 @@ def transition(current: PatientPhase, event: str) -> PatientPhase:
 def is_valid_transition(current: PatientPhase, event: str) -> bool:
     """Check if a transition is valid without raising."""
     return (current, event) in _TRANSITIONS
+
+
+def transition_target(event: str) -> str | None:
+    """Look up the target phase for a given event (any source phase).
+
+    Returns the target phase value, or None if the event is unknown.
+    Used for replay safety in save_patient_context.
+    """
+    for (_, evt), target in _TRANSITIONS.items():
+        if evt == event:
+            return target.value
+    return None

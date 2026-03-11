@@ -61,7 +61,7 @@ async def _run_worker() -> None:
     import structlog
     from langgraph.checkpoint.memory import MemorySaver
 
-    from health_coach.agent.context import CoachContext
+    from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.alert_channel import MockAlertChannel
@@ -97,18 +97,12 @@ async def _run_worker() -> None:
 
     graph = compile_graph(checkpointer=MemorySaver())
 
-    def ctx_factory(
-        session_factory: object,
-        engine: object,
-    ) -> CoachContext:
-        return CoachContext(
-            session_factory=session_factory,  # type: ignore[arg-type]
-            engine=engine,  # type: ignore[arg-type]
-            consent_service=consent_service,
-            settings=settings,
-            coach_config=coach_config,
-            model_gateway=model_gateway,
-        )
+    ctx_factory = create_context_factory(
+        consent_service=consent_service,
+        settings=settings,
+        coach_config=coach_config,
+        model_gateway=model_gateway,
+    )
 
     followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
     timeout_handler = OnboardingTimeoutHandler()

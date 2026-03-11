@@ -13,7 +13,7 @@ from sqlalchemy import update
 from health_coach.agent.context import get_coach_context
 from health_coach.agent.state import PatientState  # noqa: TC001
 from health_coach.domain.errors import PhaseTransitionError
-from health_coach.domain.phase_machine import transition
+from health_coach.domain.phase_machine import transition, transition_target
 from health_coach.domain.phases import PatientPhase
 from health_coach.persistence.models import (
     AuditEvent,
@@ -139,7 +139,7 @@ async def save_patient_context(
                 )
             except PhaseTransitionError:
                 # Replay safety: if already at target, skip
-                target = _expected_target(phase_event)
+                target = transition_target(phase_event)
                 if target and patient.phase == target:
                     logger.info(
                         "phase_transition_already_applied",
@@ -279,17 +279,3 @@ async def save_patient_context(
 
     logger.info("patient_context_saved", patient_id=patient_id)
     return {"pending_effects": None}
-
-
-def _expected_target(event: str) -> str | None:
-    """Map phase events to their expected target phase for replay safety."""
-    targets: dict[str, str] = {
-        "onboarding_initiated": "onboarding",
-        "goal_confirmed": "active",
-        "no_response_timeout": "dormant",
-        "unanswered_outreach": "re_engaging",
-        "missed_third_message": "dormant",
-        "patient_responded": "active",
-        "patient_returned": "re_engaging",
-    }
-    return targets.get(event)

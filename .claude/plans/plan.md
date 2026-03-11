@@ -58,7 +58,15 @@ Commit: "fix: resolve 5 confirmed bugs (outbox payload, retry pollution, updated
 
 ---
 
-### M2: Code Quality — Deduplication, Dead Code, Type Safety (high impact)
+### M2: Code Quality — Deduplication, Dead Code, Type Safety (high impact) ✅ COMPLETE
+
+- [x] Step 6 — Extract `create_context_factory` to context.py, fix types in main.py + __main__.py
+- [x] Step 8 — Extract `accumulate_effects` helper, refactor 4 node modules
+- [x] Step 9 — Unify prompt sources (onboarding.py composes from system.py)
+- [x] Step 10 — Remove dead code (_select_tone, CELEBRATION/NUDGE augmentations, MESSAGE_THRESHOLD)
+- [x] Step 11 — Add `transition_target` to phase_machine, replace `_expected_target`
+- [x] Step 12 — Remove orphan DB tables (ConversationThread, Message, ToolInvocation)
+Commit: "refactor: code quality — deduplicate, remove dead code, improve type safety"
 
 **Step 6:** Extract `create_coach_context` factory
 - **File to change:** `src/health_coach/agent/context.py`

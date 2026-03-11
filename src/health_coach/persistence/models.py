@@ -243,53 +243,6 @@ class SafetyDecisionRecord(Base):
     )
 
 
-class ConversationThread(Base):
-    """Maps to LangGraph thread_id."""
-
-    __tablename__ = "conversation_threads"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[str] = mapped_column(String(50), index=True)
-    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("patients.id"))
-    thread_id: Mapped[str] = mapped_column(String(100), unique=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-
-class Message(Base):
-    """Queryable message record (separate from checkpoint)."""
-
-    __tablename__ = "messages"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[str] = mapped_column(String(50), index=True)
-    patient_id: Mapped[uuid.UUID]
-    thread_id: Mapped[str] = mapped_column(String(100), index=True)
-    role: Mapped[str] = mapped_column(String(20))  # human, ai, system
-    content_hash: Mapped[str | None] = mapped_column(String(64))  # PHI-safe reference
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-
-class ToolInvocation(Base):
-    """Tool call audit record."""
-
-    __tablename__ = "tool_invocations"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[str] = mapped_column(String(50), index=True)
-    patient_id: Mapped[uuid.UUID]
-    tool_name: Mapped[str] = mapped_column(String(50))
-    idempotency_key: Mapped[str] = mapped_column(String(200), unique=True)
-    input_hash: Mapped[str | None] = mapped_column(String(64))
-    outcome: Mapped[str] = mapped_column(String(20))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-
 class ProcessedEvent(Base):
     """Inbound event deduplication."""
 

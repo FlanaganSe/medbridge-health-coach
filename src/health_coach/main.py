@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
 import structlog
 from fastapi import FastAPI
 
@@ -88,14 +90,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def _setup_graph_and_context(
     app: FastAPI,
-    session_factory: object,
-    engine: object,
+    session_factory: async_sessionmaker[AsyncSession],
+    engine: AsyncEngine,
     settings: Settings,
 ) -> None:
     """Set up graph and context factory on app.state for API endpoints."""
     from langgraph.checkpoint.memory import MemorySaver
 
-    from health_coach.agent.context import CoachContext
+    from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.consent_factory import create_consent_service
@@ -106,29 +108,26 @@ def _setup_graph_and_context(
     consent_service = create_consent_service(settings)
     graph = compile_graph(checkpointer=MemorySaver())
 
-    def ctx_factory(session_factory: object, engine: object) -> CoachContext:
-        return CoachContext(
-            session_factory=session_factory,  # type: ignore[arg-type]
-            engine=engine,  # type: ignore[arg-type]
-            consent_service=consent_service,
-            settings=settings,
-            coach_config=coach_config,
-            model_gateway=model_gateway,
-        )
+    ctx_factory = create_context_factory(
+        consent_service=consent_service,
+        settings=settings,
+        coach_config=coach_config,
+        model_gateway=model_gateway,
+    )
 
     app.state.graph = graph
     app.state.ctx_factory = ctx_factory
 
 
 async def _run_background_workers(
-    session_factory: object,
-    engine: object,
+    session_factory: async_sessionmaker[AsyncSession],
+    engine: AsyncEngine,
     settings: Settings,
 ) -> None:
     """Run scheduler and delivery workers as background tasks (all mode only)."""
     from langgraph.checkpoint.memory import MemorySaver
 
-    from health_coach.agent.context import CoachContext
+    from health_coach.agent.context import create_context_factory
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.alert_channel import MockAlertChannel
@@ -152,18 +151,12 @@ async def _run_background_workers(
 
     graph = compile_graph(checkpointer=MemorySaver())
 
-    def ctx_factory(
-        session_factory: object,
-        engine: object,
-    ) -> CoachContext:
-        return CoachContext(
-            session_factory=session_factory,  # type: ignore[arg-type]
-            engine=engine,  # type: ignore[arg-type]
-            consent_service=consent_service,
-            settings=settings,
-            coach_config=coach_config,
-            model_gateway=model_gateway,
-        )
+    ctx_factory = create_context_factory(
+        consent_service=consent_service,
+        settings=settings,
+        coach_config=coach_config,
+        model_gateway=model_gateway,
+    )
 
     followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
     timeout_handler = OnboardingTimeoutHandler()
@@ -172,18 +165,18 @@ async def _run_background_workers(
         timeout_handler=timeout_handler,
     )
 
-    await startup_recovery(session_factory)  # type: ignore[arg-type]
+    await startup_recovery(session_factory)
 
     scheduler = SchedulerWorker(
-        session_factory=session_factory,  # type: ignore[arg-type]
-        engine=engine,  # type: ignore[arg-type]
+        session_factory=session_factory,
+        engine=engine,
         dispatcher=dispatcher,
         poll_interval_seconds=settings.scheduler_poll_interval_seconds,
         coach_config=coach_config,
     )
 
     delivery = DeliveryWorker(
-        session_factory=session_factory,  # type: ignore[arg-type]
+        session_factory=session_factory,
         consent_service=consent_service,
         notification_channel=MockNotificationChannel(),
         alert_channel=MockAlertChannel(),

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from health_coach.agent.context import get_coach_context
+from health_coach.agent.effects import accumulate_effects
 from health_coach.agent.prompts.safety import SAFETY_CLASSIFIER_PROMPT
 from health_coach.agent.state import PatientState  # noqa: TC001
 from health_coach.domain.safety_types import ClassifierOutput, SafetyDecision
@@ -63,41 +64,32 @@ async def safety_gate(
         confidence=result.confidence,
     )
 
-    # Accumulate safety decision in pending_effects
-    current_effects = state.get("pending_effects") or {}
-    existing_decisions: list[dict[str, object]] = list(current_effects.get("safety_decisions", []))
-    existing_decisions.append(
-        {
-            "decision": result.decision.value,
-            "source": "classifier",
-            "confidence": result.confidence,
-            "reasoning": result.reasoning,
-        }
-    )
-
-    # Accumulate audit event
-    existing_audit: list[dict[str, object]] = list(current_effects.get("audit_events", []))
-    existing_audit.append(
-        {
-            "event_type": "safety_classification",
-            "outcome": result.decision.value,
-            "metadata": {
+    effects = accumulate_effects(
+        state,
+        safety_decisions=[
+            {
+                "decision": result.decision.value,
+                "source": "classifier",
                 "confidence": result.confidence,
                 "reasoning": result.reasoning,
-                "retry_count": state.get("safety_retry_count", 0),
-            },
-        }
+            }
+        ],
+        audit_events=[
+            {
+                "event_type": "safety_classification",
+                "outcome": result.decision.value,
+                "metadata": {
+                    "confidence": result.confidence,
+                    "reasoning": result.reasoning,
+                    "retry_count": state.get("safety_retry_count", 0),
+                },
+            }
+        ],
     )
-
-    updated_effects = {
-        **current_effects,
-        "safety_decisions": existing_decisions,
-        "audit_events": existing_audit,
-    }
 
     return {
         "safety_decision": result.decision.value,
-        "pending_effects": updated_effects,
+        "pending_effects": effects,
     }
 
 

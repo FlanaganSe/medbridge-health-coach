@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-    from health_coach.agent.context import CoachContext
+    from health_coach.agent.context import ContextFactory
 
 logger = structlog.stdlib.get_logger()
 
@@ -86,7 +86,7 @@ class FollowupJobHandler:
     def __init__(
         self,
         graph: CompiledStateGraph,
-        ctx_factory: _CtxFactory,
+        ctx_factory: ContextFactory,
     ) -> None:
         self._graph = graph
         self._ctx_factory = ctx_factory
@@ -219,13 +219,3 @@ class OnboardingTimeoutHandler:
             "onboarding_timeout_processed",
             patient_id=patient_id,
         )
-
-
-class _CtxFactory(Protocol):
-    """Factory for creating CoachContext per job."""
-
-    def __call__(
-        self,
-        session_factory: async_sessionmaker[AsyncSession],
-        engine: AsyncEngine,
-    ) -> CoachContext: ...
