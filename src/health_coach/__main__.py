@@ -59,13 +59,17 @@ async def _run_worker() -> None:
     import asyncio
 
     import structlog
+    from langgraph.checkpoint.memory import MemorySaver
 
     from health_coach.agent.context import CoachContext
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.consent import FakeConsentService
     from health_coach.domain.scheduling import CoachConfig
+    from health_coach.integrations.alert_channel import MockAlertChannel
     from health_coach.integrations.model_gateway import AnthropicModelGateway
+    from health_coach.integrations.notification import MockNotificationChannel
     from health_coach.observability.logging import configure_logging
+    from health_coach.orchestration.delivery_worker import DeliveryWorker
     from health_coach.orchestration.jobs import (
         FollowupJobHandler,
         JobDispatcher,
@@ -89,9 +93,7 @@ async def _run_worker() -> None:
     session_factory = create_session_factory(engine)
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
-
-    # Compile graph with appropriate checkpointer
-    from langgraph.checkpoint.memory import MemorySaver
+    consent_service = FakeConsentService(logged_in=True, consented=True)
 
     graph = compile_graph(checkpointer=MemorySaver())
 
@@ -102,7 +104,7 @@ async def _run_worker() -> None:
         return CoachContext(
             session_factory=session_factory,  # type: ignore[arg-type]
             engine=engine,  # type: ignore[arg-type]
-            consent_service=FakeConsentService(logged_in=True, consented=True),
+            consent_service=consent_service,
             settings=settings,
             coach_config=coach_config,
             model_gateway=model_gateway,
@@ -127,13 +129,24 @@ async def _run_worker() -> None:
         coach_config=coach_config,
     )
 
-    shutdown_event = scheduler.shutdown_event
+    # Start delivery worker
+    delivery = DeliveryWorker(
+        session_factory=session_factory,
+        consent_service=consent_service,
+        notification_channel=MockNotificationChannel(),
+        alert_channel=MockAlertChannel(),
+        poll_interval_seconds=settings.delivery_poll_interval_seconds,
+    )
 
     try:
         await log.ainfo("worker_running")
-        await scheduler.run()
+        await asyncio.gather(
+            scheduler.run(),
+            delivery.run(),
+        )
     except asyncio.CancelledError:
-        shutdown_event.set()
+        scheduler.shutdown_event.set()
+        delivery.shutdown_event.set()
     finally:
         await engine.dispose()
         await log.ainfo("worker_shutdown")

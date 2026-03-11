@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     scheduler_poll_interval_seconds: int = 30
     delivery_poll_interval_seconds: int = 5
 
+    # --- MedBridge Go Integration ---
+    medbridge_api_url: str = ""
+    medbridge_api_key: SecretStr = SecretStr("")
+    medbridge_webhook_secret: str = ""
+
     # --- App ---
     app_mode: Literal["api", "worker", "all"] = "all"
     host: str = "0.0.0.0"  # noqa: S104

@@ -15,7 +15,11 @@ if TYPE_CHECKING:
 import structlog
 from fastapi import FastAPI
 
+from health_coach.api.middleware.logging import RequestLoggingMiddleware
+from health_coach.api.routes.chat import router as chat_router
 from health_coach.api.routes.health import router as health_router
+from health_coach.api.routes.state import router as state_router
+from health_coach.api.routes.webhooks import router as webhook_router
 from health_coach.observability.logging import configure_logging
 from health_coach.persistence.db import (
     create_engine,
@@ -44,6 +48,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = engine
     app.state.session_factory = session_factory
     app.state.langgraph_pool = langgraph_pool
+
+    # Set up graph and context factory for API endpoints
+    _setup_graph_and_context(app, session_factory, engine, settings)
 
     if langgraph_pool is not None:
         await langgraph_pool.open(wait=True)
@@ -79,17 +86,55 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await logger.ainfo("app_shutdown")
 
 
-async def _run_background_workers(
+def _setup_graph_and_context(
+    app: FastAPI,
     session_factory: object,
     engine: object,
     settings: Settings,
 ) -> None:
-    """Run scheduler worker as a background task (all mode only)."""
+    """Set up graph and context factory on app.state for API endpoints."""
+    from langgraph.checkpoint.memory import MemorySaver
+
     from health_coach.agent.context import CoachContext
     from health_coach.agent.graph import compile_graph
     from health_coach.domain.consent import FakeConsentService
     from health_coach.domain.scheduling import CoachConfig
     from health_coach.integrations.model_gateway import AnthropicModelGateway
+
+    coach_config = CoachConfig()
+    model_gateway = AnthropicModelGateway(settings)
+    graph = compile_graph(checkpointer=MemorySaver())
+
+    def ctx_factory(session_factory: object, engine: object) -> CoachContext:
+        return CoachContext(
+            session_factory=session_factory,  # type: ignore[arg-type]
+            engine=engine,  # type: ignore[arg-type]
+            consent_service=FakeConsentService(logged_in=True, consented=True),
+            settings=settings,
+            coach_config=coach_config,
+            model_gateway=model_gateway,
+        )
+
+    app.state.graph = graph
+    app.state.ctx_factory = ctx_factory
+
+
+async def _run_background_workers(
+    session_factory: object,
+    engine: object,
+    settings: Settings,
+) -> None:
+    """Run scheduler and delivery workers as background tasks (all mode only)."""
+    from langgraph.checkpoint.memory import MemorySaver
+
+    from health_coach.agent.context import CoachContext
+    from health_coach.agent.graph import compile_graph
+    from health_coach.domain.consent import FakeConsentService
+    from health_coach.domain.scheduling import CoachConfig
+    from health_coach.integrations.alert_channel import MockAlertChannel
+    from health_coach.integrations.model_gateway import AnthropicModelGateway
+    from health_coach.integrations.notification import MockNotificationChannel
+    from health_coach.orchestration.delivery_worker import DeliveryWorker
     from health_coach.orchestration.jobs import (
         FollowupJobHandler,
         JobDispatcher,
@@ -102,16 +147,18 @@ async def _run_background_workers(
 
     coach_config = CoachConfig()
     model_gateway = AnthropicModelGateway(settings)
-
-    from langgraph.checkpoint.memory import MemorySaver
+    consent_service = FakeConsentService(logged_in=True, consented=True)
 
     graph = compile_graph(checkpointer=MemorySaver())
 
-    def ctx_factory(session_factory: object, engine: object) -> CoachContext:
+    def ctx_factory(
+        session_factory: object,
+        engine: object,
+    ) -> CoachContext:
         return CoachContext(
             session_factory=session_factory,  # type: ignore[arg-type]
             engine=engine,  # type: ignore[arg-type]
-            consent_service=FakeConsentService(logged_in=True, consented=True),
+            consent_service=consent_service,
             settings=settings,
             coach_config=coach_config,
             model_gateway=model_gateway,
@@ -134,8 +181,21 @@ async def _run_background_workers(
         coach_config=coach_config,
     )
 
+    delivery = DeliveryWorker(
+        session_factory=session_factory,  # type: ignore[arg-type]
+        consent_service=consent_service,
+        notification_channel=MockNotificationChannel(),
+        alert_channel=MockAlertChannel(),
+        poll_interval_seconds=settings.delivery_poll_interval_seconds,
+    )
+
     await logger.ainfo("background_workers_started")
-    await scheduler.run()
+
+    # Run both workers concurrently
+    await asyncio.gather(
+        scheduler.run(),
+        delivery.run(),
+    )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -150,6 +210,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
 
+    # Middleware
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # Routes
     app.include_router(health_router)
+    app.include_router(chat_router)
+    app.include_router(state_router)
+    app.include_router(webhook_router)
 
     return app
