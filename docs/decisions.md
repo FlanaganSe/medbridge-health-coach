@@ -64,3 +64,10 @@ Append-only log. Never edit past entries.
 **Context:** HIPAA requires that PHI not appear in application logs. Structured logging with structlog uses a processor chain where each processor can add or transform fields. If PHI scrubbing runs too early, later processors (e.g., `format_exc_info`) can re-introduce PHI from exception tracebacks.
 **Decision:** `scrub_phi_fields` runs as the last processor before the renderer in the structlog chain. It uses a field-name blocklist (`message_content`, `patient_name`, `ssn`, etc.) plus regex patterns (SSN, email) with recursive dict traversal.
 **Consequences:** The `_PHI_FIELD_NAMES` blocklist must grow with the domain model. Defense-in-depth — this is the last line, not the only line. The processor must always remain after `format_exc_info` in the chain.
+
+### ADR-008: Code Cleanup — Effects Helpers, Context Factory, Channel Factories
+**Date:** 2026-03-11
+**Status:** accepted
+**Context:** The M1–M7 implementation created significant duplication: 3 identical `ctx_factory` closures, 8 copy-pasted pending effects accumulation blocks across 4 node modules, hardcoded `MockNotificationChannel()`/`MockAlertChannel()` instantiation, and 4 identical mock session helpers in tests. The demo UI was unusable without manual curl commands.
+**Decision:** (1) Extract `create_coach_context()` factory to `context.py`, typed with `ContextFactory` alias. (2) Extract `accumulate_effect()`/`merge_effects()` to `agent/effects.py` as pure functions. (3) Add settings-driven `create_notification_channel()`/`create_alert_channel()` factories in `integrations/channels.py`. (4) Replace `BaseHTTPMiddleware` with pure ASGI middleware to fix SSE buffering. (5) Gate demo endpoints behind `settings.environment == "dev"`. (6) Wire `AsyncPostgresSaver` for PostgreSQL with `MemorySaver` fallback for SQLite.
+**Consequences:** Duplication eliminated. New nodes use `accumulate_effect()` instead of copy-pasting the get-or-default pattern. Channel behavior is configurable via `NOTIFICATION_CHANNEL`/`ALERT_CHANNEL` env vars. Demo endpoints are never exposed in production.

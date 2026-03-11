@@ -150,8 +150,9 @@ async def save_patient_context(
                     raise
 
         # Apply unanswered count from state (agent nodes may increment)
-        if state.get("unanswered_count") is not None:
-            patient.unanswered_count = int(state["unanswered_count"])
+        unanswered = state.get("unanswered_count")
+        if unanswered is not None:
+            patient.unanswered_count = int(unanswered)
 
         # Reset unanswered count and record response time on patient message
         if state.get("invocation_source") == "patient":
