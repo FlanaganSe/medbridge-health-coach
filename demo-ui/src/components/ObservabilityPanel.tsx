@@ -12,6 +12,7 @@ interface ObservabilityPanelProps {
   state: PatientState;
   loadState: "loading" | "loaded" | "error";
   lastUpdated: Date | null;
+  onRetry?: () => void;
 }
 
 function formatTime(iso: string): string {
@@ -82,6 +83,7 @@ export function ObservabilityPanel({
   state,
   loadState,
   lastUpdated,
+  onRetry,
 }: ObservabilityPanelProps) {
   const urgentCount = state.alerts.filter(
     (a) => a.priority === "urgent",
@@ -98,7 +100,17 @@ export function ObservabilityPanel({
           <span className="text-xs text-text-muted">Loading...</span>
         )}
         {loadState === "error" && (
-          <span className="text-xs text-red-badge-text">Error</span>
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-red-badge-text">Error</span>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="text-xs text-blue-badge-text hover:underline"
+              >
+                Retry
+              </button>
+            )}
+          </span>
         )}
         {loadState === "loaded" && lastUpdated && (
           <span className="text-xs text-text-muted">

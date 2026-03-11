@@ -44,6 +44,7 @@ export function SafetyToast({ toast, onDismiss }: SafetyToastProps) {
         </div>
         <button
           onClick={onDismiss}
+          aria-label="Dismiss"
           className="shrink-0 text-text-muted hover:text-text-secondary"
         >
           <X size={14} />

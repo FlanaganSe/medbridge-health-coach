@@ -149,12 +149,14 @@ export function ChatPanel({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
+          maxLength={4000}
           disabled={isStreaming}
           className="h-11 flex-1 rounded-lg border border-border bg-bg-subtle px-4 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-blue-badge-text"
         />
         <button
           type="submit"
           disabled={isStreaming || !input.trim()}
+          aria-label="Send message"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-red text-white transition-opacity disabled:opacity-40"
         >
           <Send size={18} />

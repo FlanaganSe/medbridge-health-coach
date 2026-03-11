@@ -257,8 +257,8 @@ export function useSSE(): UseSSEReturn {
       } else if (error) {
         collectedMessages.push({
           id: crypto.randomUUID(),
-          role: "assistant",
-          content: `[Error: ${error}]`,
+          role: "error",
+          content: error,
           timestamp: new Date(),
         });
       }

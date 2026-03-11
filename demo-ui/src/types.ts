@@ -82,7 +82,7 @@ export interface ResetPatientResponse {
 
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant" | "tool";
+  role: "user" | "assistant" | "tool" | "error";
   content: string;
   timestamp: Date;
   toolName?: string;

@@ -7,6 +7,10 @@ import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 interface DemoControlBarProps {
   patientId: string;
   externalPatientId: string;
@@ -51,7 +55,7 @@ export function DemoControlBar({
       onStateChanged();
     } catch (err) {
       setSeedStatus("error");
-      showStatus(`Seed failed: ${err}`);
+      showStatus(`Seed failed: ${errorMessage(err)}`);
     }
   }, [tenantId, externalPatientId, onPatientSeeded, showStatus, onStateChanged]);
 
@@ -65,7 +69,7 @@ export function DemoControlBar({
       onStateChanged();
     } catch (err) {
       setTriggerStatus("error");
-      showStatus(`No pending check-ins: ${err}`);
+      showStatus(`No pending check-ins: ${errorMessage(err)}`);
     }
   }, [patientId, showStatus, onStateChanged]);
 
@@ -81,7 +85,7 @@ export function DemoControlBar({
       onStateChanged();
     } catch (err) {
       setResetStatus("error");
-      showStatus(`Reset failed: ${err}`);
+      showStatus(`Reset failed: ${errorMessage(err)}`);
     }
   }, [patientId, showStatus, onStateChanged]);
 

@@ -36,6 +36,7 @@ export function TopBar({
         <select
           value={selectedPatientId}
           onChange={(e) => onPatientChange(e.target.value)}
+          aria-label="Select patient"
           className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] text-text-primary outline-none"
         >
           {patients.map((p) => (

@@ -45,6 +45,7 @@ export function PipelineTrace({ nodes, isStreaming }: PipelineTraceProps) {
         {done && (
           <button
             onClick={() => setExpanded(false)}
+            aria-label="Collapse pipeline"
             className="ml-auto text-[11px] text-text-muted hover:text-text-secondary"
           >
             collapse

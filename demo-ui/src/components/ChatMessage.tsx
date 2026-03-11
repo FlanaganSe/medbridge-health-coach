@@ -1,4 +1,4 @@
-import { Bot, Wrench } from "lucide-react";
+import { AlertCircle, Bot, Wrench } from "lucide-react";
 import type { ChatMessage as ChatMessageType } from "../types";
 
 function formatTime(date: Date): string {
@@ -72,6 +72,27 @@ function ToolMessage({
   );
 }
 
+// --- Error message ---
+function ErrorMessage({ content, timestamp }: ChatMessageType) {
+  return (
+    <div className="flex w-full gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-badge-bg">
+        <AlertCircle size={18} className="text-red-badge-text" />
+      </div>
+      <div className="max-w-[520px]">
+        <div className="rounded-bl-xl rounded-br-xl rounded-tr-xl bg-red-badge-bg px-4 py-3">
+          <p className="text-sm leading-relaxed text-red-badge-text">
+            {content}
+          </p>
+        </div>
+        <span className="mt-1 block text-[11px] text-text-muted">
+          {formatTime(timestamp)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // --- Dispatcher ---
 export function ChatMessageBubble(props: ChatMessageType) {
   switch (props.role) {
@@ -79,6 +100,8 @@ export function ChatMessageBubble(props: ChatMessageType) {
       return <UserMessage {...props} />;
     case "tool":
       return <ToolMessage {...props} />;
+    case "error":
+      return <ErrorMessage {...props} />;
     default:
       return <BotMessage {...props} />;
   }

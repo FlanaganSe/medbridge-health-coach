@@ -60,6 +60,7 @@ export function App() {
           state={state}
           loadState={loadState}
           lastUpdated={lastUpdated}
+          onRetry={refresh}
         />
       </div>
     </div>
