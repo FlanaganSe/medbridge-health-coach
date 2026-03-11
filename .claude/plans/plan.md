@@ -888,7 +888,7 @@ Write end-to-end tests with `InMemorySaver` + fake LLM:
 
 ---
 
-## Milestone 5: Durable Follow-up and Lifecycle Management
+## Milestone 5: Durable Follow-up and Lifecycle Management ✅ COMPLETE
 
 **Objective:** Add multi-day persistence, scheduling, disengagement, and re-engagement.
 **PRD ref:** §11 M5; FR-6, FR-7, FR-8; NFR-2, NFR-5

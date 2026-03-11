@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
+
+from health_coach.domain.scheduling import add_jitter, calculate_send_time
 
 if TYPE_CHECKING:
     from health_coach.agent.state import PendingEffects
@@ -37,6 +40,25 @@ def set_goal(
 
     current_effects: PendingEffects = state.get("pending_effects") or {}
 
+    # Schedule Day 2 follow-up (chain scheduling: only first job)
+    now = datetime.now(UTC)
+    base_time = now + timedelta(days=2)
+    send_time = calculate_send_time(base_time, "America/New_York", 21, 8)
+    send_time = add_jitter(send_time)
+
+    day2_hash = hashlib.sha256(f"{patient_id}:day_2".encode()).hexdigest()[:16]
+    day2_key = f"{patient_id}:day_2_followup:{day2_hash}"
+
+    existing_jobs: list[dict[str, object]] = list(current_effects.get("scheduled_jobs", []))
+    existing_jobs.append(
+        {
+            "job_type": "day_2_followup",
+            "idempotency_key": day2_key,
+            "scheduled_at": send_time,
+            "metadata": {"follow_up_day": 2},
+        }
+    )
+
     updated_effects: PendingEffects = {
         **current_effects,  # type: ignore[typeddict-item]
         "goal": {
@@ -45,6 +67,7 @@ def set_goal(
             "idempotency_key": idempotency_key,
         },
         "phase_event": "goal_confirmed",
+        "scheduled_jobs": existing_jobs,
     }
 
     return Command(

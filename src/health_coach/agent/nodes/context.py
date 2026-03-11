@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib as _hashlib
 import uuid
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import structlog
@@ -141,9 +143,14 @@ async def save_patient_context(
                 else:
                     raise
 
-        # Reset unanswered count on patient response
+        # Apply unanswered count from state (agent nodes may increment)
+        if "unanswered_count" in state:
+            patient.unanswered_count = int(state["unanswered_count"])
+
+        # Reset unanswered count and record response time on patient message
         if state.get("invocation_source") == "patient":
             patient.unanswered_count = 0
+            patient.last_patient_response_at = datetime.now(UTC)
 
         # Persist goal
         goal_data = effects.get("goal")
@@ -240,10 +247,28 @@ async def save_patient_context(
                 )
             )
 
-        # Update last_outreach_at if outreach outbox entry created
-        if effects.get("outbox_entries") and state.get("invocation_source") == "scheduler":
-            from datetime import UTC, datetime
+        # Create outbox entry for outbound message (Plan Invariant #2)
+        outbound = state.get("outbound_message")
+        has_outbound = False
+        if outbound:
+            msg_hash = _hashlib.sha256(str(outbound).encode()).hexdigest()[:16]
+            delivery_key = f"{patient_id}:msg:{msg_hash}"
+            session.add(
+                OutboxEntry(
+                    tenant_id=tenant_id,
+                    patient_id=pid,
+                    delivery_key=delivery_key,
+                    message_type="patient_message",
+                    priority=0,
+                    channel="default",
+                    payload={"message": str(outbound)},
+                    status="pending",
+                )
+            )
+            has_outbound = True
 
+        # Update last_outreach_at on scheduler-initiated outreach
+        if has_outbound and state.get("invocation_source") == "scheduler":
             patient.last_outreach_at = datetime.now(UTC)
 
     logger.info("patient_context_saved", patient_id=patient_id)

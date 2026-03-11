@@ -18,7 +18,8 @@
       "reportUnusedImport": false,
       "reportArgumentType": false,
       "reportAttributeAccessIssue": false,
-      "reportPrivateUsage": false
+      "reportPrivateUsage": false,
+      "reportOperatorIssue": false
     }
   ]
 }

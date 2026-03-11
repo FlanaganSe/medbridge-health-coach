@@ -1,7 +1,11 @@
 """FastAPI application with lifespan management."""
 
+# pyright: reportUnknownVariableType=false
+
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -45,6 +49,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await langgraph_pool.open(wait=True)
         await logger.ainfo("langgraph_pool_opened")
 
+    # Start background workers in "all" mode
+    worker_task: asyncio.Task[None] | None = None
+    if settings.app_mode == "all":
+        worker_task = asyncio.create_task(
+            _run_background_workers(session_factory, engine, settings),
+            name="background_workers",
+        )
+
     await logger.ainfo(
         "app_started",
         mode=settings.app_mode,
@@ -53,12 +65,76 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    # Shutdown workers
+    if worker_task is not None:
+        worker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await worker_task
+
     if langgraph_pool is not None:
         await langgraph_pool.close()
         await logger.ainfo("langgraph_pool_closed")
 
     await engine.dispose()
     await logger.ainfo("app_shutdown")
+
+
+async def _run_background_workers(
+    session_factory: object,
+    engine: object,
+    settings: Settings,
+) -> None:
+    """Run scheduler worker as a background task (all mode only)."""
+    from health_coach.agent.context import CoachContext
+    from health_coach.agent.graph import compile_graph
+    from health_coach.domain.consent import FakeConsentService
+    from health_coach.domain.scheduling import CoachConfig
+    from health_coach.integrations.model_gateway import AnthropicModelGateway
+    from health_coach.orchestration.jobs import (
+        FollowupJobHandler,
+        JobDispatcher,
+        OnboardingTimeoutHandler,
+    )
+    from health_coach.orchestration.reconciliation import startup_recovery
+    from health_coach.orchestration.scheduler import SchedulerWorker
+
+    logger = structlog.stdlib.get_logger()
+
+    coach_config = CoachConfig()
+    model_gateway = AnthropicModelGateway(settings)
+
+    from langgraph.checkpoint.memory import MemorySaver
+
+    graph = compile_graph(checkpointer=MemorySaver())
+
+    def ctx_factory(session_factory: object, engine: object) -> CoachContext:
+        return CoachContext(
+            session_factory=session_factory,  # type: ignore[arg-type]
+            engine=engine,  # type: ignore[arg-type]
+            consent_service=FakeConsentService(logged_in=True, consented=True),
+            settings=settings,
+            coach_config=coach_config,
+            model_gateway=model_gateway,
+        )
+
+    followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
+    timeout_handler = OnboardingTimeoutHandler()
+    dispatcher = JobDispatcher(
+        followup_handler=followup_handler,
+        timeout_handler=timeout_handler,
+    )
+
+    await startup_recovery(session_factory)  # type: ignore[arg-type]
+
+    scheduler = SchedulerWorker(
+        session_factory=session_factory,  # type: ignore[arg-type]
+        engine=engine,  # type: ignore[arg-type]
+        dispatcher=dispatcher,
+        poll_interval_seconds=settings.scheduler_poll_interval_seconds,
+    )
+
+    await logger.ainfo("background_workers_started")
+    await scheduler.run()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
