@@ -1,5 +1,5 @@
 import { FlaskConical, RefreshCw, RotateCcw, UserPlus, Zap } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
 import type { ResetPatientResponse, TriggerFollowupResponse } from "../types";
 import { Button } from "./ui/Button";
@@ -27,10 +27,18 @@ export function DemoControlBar({
   const [resetStatus, setResetStatus] = useState<Status>("idle");
   const [statusMessage, setStatusMessage] = useState("");
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    };
+  }, []);
 
   const showStatus = useCallback((msg: string) => {
     setStatusMessage(msg);
-    setTimeout(() => setStatusMessage(""), 4000);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setStatusMessage(""), 4000);
   }, []);
 
   const handleSeed = useCallback(async () => {

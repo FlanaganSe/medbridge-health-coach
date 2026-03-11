@@ -1,5 +1,4 @@
 import {
-  CircleCheck,
   ShieldCheck,
   TriangleAlert,
   type LucideIcon,
@@ -79,17 +78,6 @@ export function AlertBadge() {
   );
 }
 
-export function SafeBadge() {
-  return (
-    <StatusBadge
-      label="SAFE"
-      Icon={ShieldCheck}
-      bg="bg-green-badge-bg"
-      text="text-green-badge-text"
-    />
-  );
-}
-
 export function RoutineBadge() {
   return (
     <StatusBadge
@@ -134,12 +122,6 @@ export function SafetyBadge({ decision }: { decision: SafetyDecision }) {
       text={style.text}
     />
   );
-}
-
-// --- Goal Check Badge ---
-
-export function GoalCheckBadge() {
-  return <CircleCheck size={16} className="text-green-dot shrink-0" />;
 }
 
 // --- Job Status Badges ---

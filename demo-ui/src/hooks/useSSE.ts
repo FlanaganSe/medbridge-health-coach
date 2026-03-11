@@ -133,10 +133,14 @@ export function useSSE(): UseSSEReturn {
               if (existing) {
                 existing.status = "complete";
               } else {
+                // Mark any prior "running" node as complete
+                for (const n of collectedNodes) {
+                  if (n.status === "running") n.status = "complete";
+                }
                 collectedNodes.push({
                   name: nodeName,
                   displayName,
-                  status: "complete",
+                  status: "running",
                 });
               }
               setPipelineNodes([...collectedNodes]);
@@ -180,6 +184,7 @@ export function useSSE(): UseSSEReturn {
                     >) {
                       if (typeof tc.name === "string") {
                         toolCalls.push({
+                          id: typeof tc.id === "string" ? tc.id : undefined,
                           name: tc.name,
                           args: (tc.args as Record<string, unknown>) ?? {},
                         });
@@ -187,20 +192,22 @@ export function useSSE(): UseSSEReturn {
                     }
                   }
 
-                  // ToolMessage (result) — match to last tool call
+                  // ToolMessage (result) — match by tool_call_id
                   if (
                     m.type === "tool" &&
-                    typeof m.content === "string" &&
-                    toolCalls.length > 0
+                    typeof m.content === "string"
                   ) {
-                    const lastTc = toolCalls[toolCalls.length - 1];
+                    const callId = typeof m.tool_call_id === "string" ? m.tool_call_id : undefined;
+                    const matchedTc = callId
+                      ? toolCalls.find((tc) => tc.id === callId)
+                      : toolCalls[toolCalls.length - 1];
                     const text = extractTextContent(m.content);
-                    if (text && lastTc) {
+                    if (text && matchedTc) {
                       collectedMessages.push({
                         id: crypto.randomUUID(),
                         role: "tool",
                         content: text,
-                        toolName: lastTc.name,
+                        toolName: matchedTc.name,
                         timestamp: new Date(),
                       });
                     }
@@ -221,6 +228,12 @@ export function useSSE(): UseSSEReturn {
         }
         parser.flush();
 
+        // Mark any remaining "running" nodes as complete
+        for (const n of collectedNodes) {
+          if (n.status === "running") n.status = "complete";
+        }
+        setPipelineNodes([...collectedNodes]);
+
         // Release the reader if aborted to avoid resource leak
         if (abort.signal.aborted) {
           await reader.cancel();
@@ -228,7 +241,9 @@ export function useSSE(): UseSSEReturn {
       } catch (err) {
         error = err instanceof Error ? err.message : String(err);
       } finally {
-        setIsStreaming(false);
+        if (!abort.signal.aborted) {
+          setIsStreaming(false);
+        }
       }
 
       // Build final assistant message

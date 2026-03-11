@@ -91,6 +91,7 @@ export interface ChatMessage {
 // --- SSE Types ---
 
 export interface ToolCallInfo {
+  id?: string;
   name: string;
   args: Record<string, unknown>;
 }

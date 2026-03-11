@@ -34,10 +34,12 @@ export function usePatientState(
   const [state, setState] = useState<PatientState>(EMPTY_STATE);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const mountedRef = useRef(true);
+  const tokenRef = useRef<object | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAll = useCallback(async () => {
+    // Capture the current token so we can detect if the patient changed mid-fetch
+    const token = tokenRef.current;
     try {
       const [phase, goals, alerts, safetyDecisions, scheduledJobs] =
         await Promise.all([
@@ -48,13 +50,13 @@ export function usePatientState(
           fetchScheduledJobs(patientId).catch(() => []),
         ]);
 
-      if (!mountedRef.current) return;
+      if (tokenRef.current !== token) return;
 
       setState({ phase, goals, alerts, safetyDecisions, scheduledJobs });
       setLoadState("loaded");
       setLastUpdated(new Date());
     } catch {
-      if (mountedRef.current) setLoadState("error");
+      if (tokenRef.current === token) setLoadState("error");
     }
   }, [patientId, tenantId]);
 
@@ -65,7 +67,8 @@ export function usePatientState(
 
   // Initial fetch + fallback polling
   useEffect(() => {
-    mountedRef.current = true;
+    const token = {};
+    tokenRef.current = token;
     setLoadState("loading");
     setState(EMPTY_STATE);
     void fetchAll();
@@ -73,7 +76,7 @@ export function usePatientState(
     intervalRef.current = setInterval(fetchAll, FALLBACK_POLL_MS);
 
     return () => {
-      mountedRef.current = false;
+      tokenRef.current = null;
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchAll]);
