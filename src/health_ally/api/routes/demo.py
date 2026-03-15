@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any, cast
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
+from langchain_core.messages import BaseMessage  # noqa: TC002
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
@@ -80,6 +82,45 @@ class AuditEventItem(BaseModel):
 
 class AuditEventsResponse(BaseModel):
     events: list[AuditEventItem]
+
+
+class ConversationMessageItem(BaseModel):
+    role: str
+    content: str
+    tool_name: str | None = None
+    message_id: str
+
+
+class ConversationHistoryResponse(BaseModel):
+    messages: list[ConversationMessageItem]
+
+
+# --- Helpers ---
+
+
+def _serialize_message(msg: BaseMessage) -> ConversationMessageItem | None:
+    """Serialize a LangChain message to API response, filtering noise."""
+    raw = cast("str | list[dict[str, Any]]", msg.content)  # type: ignore[reportUnknownMemberType]
+    if isinstance(raw, list):
+        parts: list[str] = []
+        for block in raw:
+            if block.get("type") == "text" and block.get("text"):
+                parts.append(str(block["text"]))
+        content = " ".join(parts)
+    else:
+        content = str(raw) if raw else ""
+
+    # Filter empty sentinels and tool-invoking AIMessages with no visible text
+    if not content:
+        return None
+
+    role = {"human": "human", "ai": "ai", "tool": "tool"}.get(msg.type, "ai")
+    return ConversationMessageItem(
+        role=role,
+        content=content,
+        tool_name=getattr(msg, "name", None) or None,
+        message_id=str(msg.id) if msg.id else "",
+    )
 
 
 # --- Endpoints ---
@@ -338,3 +379,38 @@ async def get_audit_events(
             for e in events
         ]
     )
+
+
+@router.get(
+    "/conversation/{patient_id}",
+    response_model=ConversationHistoryResponse,
+)
+async def get_conversation_history(
+    request: Request,
+    patient_id: str,
+) -> ConversationHistoryResponse:
+    """Return conversation history from the LangGraph checkpoint."""
+    try:
+        uuid.UUID(patient_id)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
+
+    graph = request.app.state.graph
+    thread_id = f"patient-{patient_id}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    snapshot = await graph.aget_state(config)
+
+    # Handle no checkpoint (patient never chatted)
+    if snapshot is None or not snapshot.values:
+        return ConversationHistoryResponse(messages=[])
+
+    raw_messages: list[BaseMessage] = snapshot.values.get("messages", [])
+
+    items: list[ConversationMessageItem] = []
+    for msg in raw_messages:
+        item = _serialize_message(msg)
+        if item is not None:
+            items.append(item)
+
+    return ConversationHistoryResponse(messages=items[:100])
