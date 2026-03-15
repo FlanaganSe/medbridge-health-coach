@@ -21,6 +21,7 @@ def _make_active_patient() -> MagicMock:
     """Create a mock patient in active phase."""
     patient = MagicMock()
     patient.phase = "active"
+    patient.timezone = "America/New_York"
     patient.unanswered_count = 0
     patient.last_outreach_at = None
     patient.last_patient_response_at = None

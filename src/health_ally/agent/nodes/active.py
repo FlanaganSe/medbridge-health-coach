@@ -164,7 +164,7 @@ def _accumulate_followup_job(
 
     send_time = calculate_send_time(
         base_time,
-        "America/New_York",  # TODO: get from patient context
+        state.get("patient_timezone", "America/New_York"),
         coach_config.quiet_hours_start,
         coach_config.quiet_hours_end,
     )

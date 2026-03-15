@@ -66,11 +66,13 @@ async def load_patient_context(
                 tenant_id=tenant_id,
                 external_patient_id=patient_id,
                 phase=PatientPhase.PENDING.value,
+                timezone="America/New_York",
             )
             session.add(patient)
 
     return {
         "phase": patient.phase,
+        "patient_timezone": patient.timezone,
         "unanswered_count": patient.unanswered_count,
         "last_outreach_at": (
             patient.last_outreach_at.isoformat() if patient.last_outreach_at else None

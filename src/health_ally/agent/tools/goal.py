@@ -43,7 +43,9 @@ def set_goal(
     # Schedule Day 2 follow-up (chain scheduling: only first job)
     now = datetime.now(UTC)
     base_time = now + timedelta(days=2)
-    send_time = calculate_send_time(base_time, "America/New_York", 21, 8)
+    send_time = calculate_send_time(
+        base_time, state.get("patient_timezone", "America/New_York"), 21, 8
+    )
     send_time = add_jitter(send_time)
 
     day2_hash = hashlib.sha256(f"{patient_id}:day_2".encode()).hexdigest()[:16]

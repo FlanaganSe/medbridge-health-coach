@@ -50,7 +50,13 @@
 - [x] M9: Demo Personas
   - [x] Step 1 — Replace `name` values in `DEMO_PATIENTS` array in `App.tsx` with named personas → verify: `cd demo-ui && npm run build`
   Commit: 7f5552a "feat: replace generic demo patient names with named personas"
-- [ ] M10: Phase Transition Animation
-  - [ ] Step 1 — Add `phase-pulse` keyframe and `animate-phase-pulse` class with reduced-motion guard to `index.css` → verify: `grep -q 'phase-pulse' demo-ui/src/index.css`
-  - [ ] Step 2 — Add phase-change detection (`useRef`/`useEffect`/`useState`) and conditional `animate-phase-pulse` class to `PhaseBadge` in `Badge.tsx` → verify: `cd demo-ui && npm run build`
-  Commit: "feat: add phase transition pulse animation to PhaseBadge"
+- [x] M10: Phase Transition Animation
+  - [x] Step 1 — Add `phase-pulse` keyframe and `animate-phase-pulse` class with reduced-motion guard to `index.css` → verify: `grep -q 'phase-pulse' demo-ui/src/index.css`
+  - [x] Step 2 — Add phase-change detection (`useRef`/`useEffect`/`useState`) and conditional `animate-phase-pulse` class to `PhaseBadge` in `Badge.tsx` → verify: `cd demo-ui && npm run build`
+  Commit: 5da187c "feat: add phase transition pulse animation to PhaseBadge"
+- [ ] M11: Timezone Fix — propagate patient timezone through graph state
+  - [ ] Step 1 — Add `patient_timezone: str` to `PatientState` in `state.py` → verify: `grep -q 'patient_timezone' src/health_ally/agent/state.py`
+  - [ ] Step 2 — Populate `patient_timezone` from `patient.timezone` in `load_patient_context` → verify: `grep -q 'patient_timezone' src/health_ally/agent/nodes/context.py`
+  - [ ] Step 3 — Replace hardcoded timezone in `active.py`, `re_engaging.py`, and `goal.py` with `state.get("patient_timezone", "America/New_York")` → verify: `! grep -q '"America/New_York"' src/health_ally/agent/nodes/active.py`
+  - [ ] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: "fix: propagate patient timezone instead of hardcoded America/New_York"

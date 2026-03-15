@@ -42,5 +42,6 @@ class PatientState(TypedDict, total=False):
     pending_effects: PendingEffects | None
     safety_retry_count: int
     last_outreach_at: str | None  # ISO datetime string
+    patient_timezone: str
     last_patient_response_at: str | None  # ISO datetime string
     _job_metadata: dict[str, object] | None  # Scheduler job metadata

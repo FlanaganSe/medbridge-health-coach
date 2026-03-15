@@ -89,6 +89,7 @@ async def test_pending_phase_routes_to_pending_node(graph) -> None:  # type: ign
     # Mock patient returned on second session.get (save_patient_context)
     mock_patient = MagicMock()
     mock_patient.phase = "pending"
+    mock_patient.timezone = "America/New_York"
     mock_patient.unanswered_count = 0
     mock_patient.last_outreach_at = None
     mock_patient.last_patient_response_at = None
@@ -132,6 +133,7 @@ async def test_dormant_scheduler_produces_no_outbound(graph) -> None:  # type: i
 
     mock_patient = MagicMock()
     mock_patient.phase = "dormant"
+    mock_patient.timezone = "America/New_York"
     mock_patient.unanswered_count = 0
     mock_patient.last_outreach_at = None
     mock_patient.last_patient_response_at = None
@@ -171,6 +173,7 @@ async def test_dormant_patient_produces_welcome_back(graph) -> None:  # type: ig
 
     mock_patient = MagicMock()
     mock_patient.phase = "dormant"
+    mock_patient.timezone = "America/New_York"
     mock_patient.unanswered_count = 0
     mock_patient.last_outreach_at = None
     mock_patient.last_patient_response_at = None
@@ -215,6 +218,7 @@ async def test_crisis_detected_routes_to_fallback(graph) -> None:  # type: ignor
     # Use a special crisis check that sets crisis_detected=True
     mock_patient = MagicMock()
     mock_patient.phase = "active"
+    mock_patient.timezone = "America/New_York"
     mock_patient.unanswered_count = 0
     mock_patient.last_outreach_at = None
     mock_patient.last_patient_response_at = None

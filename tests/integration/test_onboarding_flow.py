@@ -26,6 +26,7 @@ def _make_onboarding_patient() -> MagicMock:
     """Create a mock patient in onboarding phase."""
     patient = MagicMock()
     patient.phase = "onboarding"
+    patient.timezone = "America/New_York"
     patient.unanswered_count = 0
     patient.last_outreach_at = None
     patient.last_patient_response_at = None

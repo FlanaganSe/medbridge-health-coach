@@ -160,7 +160,7 @@ def _accumulate_backoff_job(
 
     send_time = calculate_send_time(
         base_time,
-        "America/New_York",  # TODO: get from patient context
+        state.get("patient_timezone", "America/New_York"),
         coach_config.quiet_hours_start,
         coach_config.quiet_hours_end,
     )
@@ -195,7 +195,7 @@ def _accumulate_patient_return(
     base_time = now + timedelta(days=coach_config.follow_up_days[0])
     send_time = calculate_send_time(
         base_time,
-        "America/New_York",
+        state.get("patient_timezone", "America/New_York"),
         coach_config.quiet_hours_start,
         coach_config.quiet_hours_end,
     )
