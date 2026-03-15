@@ -768,7 +768,7 @@ Three horizontal layers — **TopBar** → **DemoControlBar** → **MainBody** (
 
 - **Design tokens** — Tailwind CSS v4 `@theme` directive in `index.css` with full color palette, font families (Space Grotesk, Inter, JetBrains Mono), and CSS animations.
 - **Typed API client** (`api.ts`) — Generic `request<T>()` fetcher with `ApiError` class. Typed wrappers for all endpoints.
-- **`useSSE` hook** — Line-buffered SSE parser that extracts ALL node data from each `stream_mode="updates"` event: pipeline progression, outbound_message (progressive render), safety decisions (with confidence from `pending_effects`), and tool calls (paired by `tool_call_id` for multi-tool correctness). Returns `SSEResult` with messages, pipelineNodes, safetyDecision, error.
+- **`useSSE` hook** — Line-buffered SSE parser that handles two stream modes: `updates` (node state deltas for pipeline progression, safety decisions, tool calls) and `custom` (token-level streaming for progressive text rendering). Tool call-result pairing uses `tool_call_id` for multi-tool correctness. Returns `SSEResult` with messages, pipelineNodes, safetyDecision, error.
 - **`usePatientState` hook** — Event-driven state refresh replaces the old 2s polling (which produced 8 req/s). SSE `done` event triggers an immediate fetch via `refresh()` callback; 10s fallback interval catches scheduler-driven changes. Per-launch cancellation token prevents stale patient data from overwriting new patient state on rapid patient switches.
 - **Reusable components** — `Badge.tsx` (PhaseBadge, AlertBadge, RoutineBadge, SafetyBadge, JobStatusBadge), `Button.tsx` (primary/secondary/danger variants), `ConfirmDialog.tsx` (accessible modal with `role="dialog"`, `aria-modal`, escape-to-close).
 

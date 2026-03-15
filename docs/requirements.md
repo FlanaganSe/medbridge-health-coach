@@ -32,7 +32,9 @@ The coach initiates a multi-turn conversation that:
 
 ### 2. LangGraph Agent with Phase Routing
 
-A main router graph that reads phase state and dispatches to phase-specific subgraphs.
+A main router graph that reads phase state and dispatches to phase-specific nodes.
+
+> **Note:** The original spec referenced "subgraphs" — ADR-001 decided on a single StateGraph with conditional edges instead. See `docs/decisions.md`.
 
 **Phase lifecycle:** `PENDING` → `ONBOARDING` → `ACTIVE` → `RE_ENGAGING` → `DORMANT`
 

@@ -4,6 +4,13 @@ CLAUDE.local.md
 # Local agent memory (machine-specific)
 .claude/agent-memory-local/
 
+# Legacy Codex/Agents config (superseded by .claude/)
+.agents/
+AGENTS.md
+
+# Nested .claude dirs from subdir runs
+demo-ui/.claude/
+
 # OS
 .DS_Store
 

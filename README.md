@@ -77,8 +77,9 @@ src/health_ally/
 └── observability/      # Logging configuration, PHI scrubbing
 
 tests/
-├── unit/               # ~150 unit tests
-├── integration/        # ~30 integration tests (PostgreSQL-backed)
+├── unit/               # Unit tests
+├── integration/        # Integration tests (graph routing, streaming, lifecycle)
+├── safety/             # Safety classifier + clinical boundary tests
 ├── contract/           # Webhook contract tests
 └── evals/              # 24 LLM evals (excluded from default pytest run)
 
@@ -177,7 +178,7 @@ See `src/health_ally/settings.py` for the full configuration reference.
 | `/health/live` | GET | Liveness probe |
 | `/health/ready` | GET | Readiness probe (checks DB) |
 
-Demo routes (`/api/demo/*`) are available only when `ENVIRONMENT=dev`.
+Demo routes (`/v1/demo/*`) are available only when `ENVIRONMENT=dev`.
 
 ## Deployment
 
@@ -194,7 +195,7 @@ Railway auto-injects `DATABASE_URL` from the PostgreSQL plugin. The settings val
 | Document | Description |
 |---|---|
 | `docs/requirements.md` | Functional requirements |
-| `docs/decisions.md` | Architecture Decision Records (ADR-001–010) |
+| `docs/decisions.md` | Architecture Decision Records (ADR-001–012) |
 | `docs/phi-data-flow.md` | HIPAA / PHI data handling |
 | `docs/intended-use.md` | Clinical boundaries and safety architecture |
 

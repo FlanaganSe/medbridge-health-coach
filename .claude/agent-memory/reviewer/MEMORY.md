@@ -46,6 +46,13 @@
 - No SQL injection risk in `demo.py` — all queries use SQLAlchemy parameterized ORM expressions. UUID parsing is done via `uuid.UUID()` before use, which is a correct guard.
 - The `environment == "dev"` gate in `main.py` is correct. The import is deferred inside the `if` block, so the module is not even loaded in non-dev environments.
 
+## Patterns Confirmed in M3 Demo UI (617395b)
+
+- `msg.id` — `_serialize_message` in `demo.py` generates `uuid.uuid4()` fallback for messages without IDs (fixed 2026-03-15 in M8). React key uniqueness is guaranteed.
+- `ToolMessage.name` — `_serialize_message` recovers tool name via `tool_call_names` dict built from preceding `AIMessage.tool_calls` (fixed 2026-03-15 in M2).
+- Ordering: `snapshot.values["messages"]` is oldest-first (LangGraph `add_messages` reducer always appends). Backend returns `items[:100]` (oldest 100). UI renders in array order (oldest at top). This is correct for a conversation transcript display.
+- Count badge on the Conversation section header shows the full list length (up to 100 from the endpoint), and the overflow text shows `length - 20 more`. Both are accurate.
+
 ## Known Issues Found in M2
 
 - `FakeConsentService.reason` field in `check()` uses `self.allowed` (a property on the fake) — this is fine, not a bug.

@@ -105,10 +105,10 @@ This document maps where Protected Health Information (PHI) enters, flows throug
 ### structlog Processor Chain
 ```
 merge_contextvars → add_log_level → add_logger_name → TimeStamper
-    → scrub_phi_fields → otel_trace → StackInfoRenderer → format_exc_info
+    → otel_trace → StackInfoRenderer → format_exc_info → scrub_phi_fields
 ```
 
-The `scrub_phi_fields` processor:
+`scrub_phi_fields` runs **last** — after `format_exc_info` renders exception text into string form, so PHI in exception messages is also scrubbed. The processor:
 - **Strips known PHI field names**: `message_content`, `patient_name`, `email`, `phone`, `body`, `diagnosis`, `medication`, `treatment`, `symptoms`, etc.
 - **Pattern-matches values**: SSN patterns (`\d{3}-\d{2}-\d{4}`), email addresses
 - **Replaces with `[REDACTED]`** — not deleted, so log structure is preserved for debugging
