@@ -98,7 +98,10 @@ class ConversationHistoryResponse(BaseModel):
 # --- Helpers ---
 
 
-def _serialize_message(msg: BaseMessage) -> ConversationMessageItem | None:
+def _serialize_message(
+    msg: BaseMessage,
+    tool_call_names: dict[str, str],
+) -> ConversationMessageItem | None:
     """Serialize a LangChain message to API response, filtering noise."""
     raw = cast("str | list[dict[str, Any]]", msg.content)  # type: ignore[reportUnknownMemberType]
     if isinstance(raw, list):
@@ -115,11 +118,21 @@ def _serialize_message(msg: BaseMessage) -> ConversationMessageItem | None:
         return None
 
     role = {"human": "human", "ai": "ai", "tool": "tool"}.get(msg.type, "ai")
+
+    # Recover tool name: prefer msg.name, then look up from preceding AIMessage tool_calls
+    tool_name: str | None = None
+    if role == "tool":
+        tool_name = getattr(msg, "name", None) or None
+        if not tool_name:
+            tc_id = getattr(msg, "tool_call_id", None)
+            if tc_id:
+                tool_name = tool_call_names.get(tc_id)
+
     return ConversationMessageItem(
         role=role,
         content=content,
-        tool_name=getattr(msg, "name", None) or None,
-        message_id=str(msg.id) if msg.id else "",
+        tool_name=tool_name,
+        message_id=str(msg.id) if msg.id else str(uuid.uuid4()),
     )
 
 
@@ -407,9 +420,19 @@ async def get_conversation_history(
 
     raw_messages: list[BaseMessage] = snapshot.values.get("messages", [])
 
+    # Build tool_call_id → tool_name lookup from AIMessage.tool_calls
+    tool_call_names: dict[str, str] = {}
+    for msg in raw_messages:
+        tool_calls: list[dict[str, Any]] = getattr(msg, "tool_calls", [])  # type: ignore[reportUnknownMemberType]
+        for tc in tool_calls:
+            tc_id = tc.get("id")
+            tc_name = tc.get("name")
+            if isinstance(tc_id, str) and isinstance(tc_name, str):
+                tool_call_names[tc_id] = tc_name
+
     items: list[ConversationMessageItem] = []
     for msg in raw_messages:
-        item = _serialize_message(msg)
+        item = _serialize_message(msg, tool_call_names)
         if item is not None:
             items.append(item)
 

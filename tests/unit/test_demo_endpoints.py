@@ -228,6 +228,53 @@ async def test_get_conversation_history_filters_sentinels(app: FastAPI) -> None:
     assert messages[2]["content"] == "I've set your goal."
 
 
+async def test_get_conversation_history_recovers_tool_name(app: FastAPI) -> None:
+    """Tool name is recovered from AIMessage.tool_calls when ToolMessage has no name."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        seed_resp = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant"},
+        )
+        patient_id = seed_resp.json()["patient_id"]
+
+    mock_snapshot = MagicMock()
+    mock_snapshot.values = {
+        "messages": [
+            HumanMessage(content="Set a goal"),
+            AIMessage(
+                content="",
+                tool_calls=[{"name": "set_goal", "args": {}, "id": "tc-1"}],
+            ),
+            # ToolMessage without name= (matches real agent behavior)
+            ToolMessage(content="Goal set!", tool_call_id="tc-1"),
+            AIMessage(content="Done!"),
+        ],
+    }
+    original_aget_state = app.state.graph.aget_state
+    app.state.graph.aget_state = AsyncMock(return_value=mock_snapshot)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            resp = await client.get(f"/v1/demo/conversation/{patient_id}")
+    finally:
+        app.state.graph.aget_state = original_aget_state
+
+    assert resp.status_code == 200
+    messages = resp.json()["messages"]
+    assert len(messages) == 3  # HumanMessage, ToolMessage, AIMessage (tool-invoking filtered)
+    assert messages[1]["role"] == "tool"
+    assert messages[1]["tool_name"] == "set_goal"
+    # All message_ids should be non-empty (UUID fallback for messages without id)
+    for m in messages:
+        assert m["message_id"] != ""
+
+
 async def test_trigger_followup_with_no_jobs_returns_404(app: FastAPI) -> None:
     """Trigger followup for patient with no pending jobs returns 404."""
     async with AsyncClient(
