@@ -5,9 +5,12 @@ from __future__ import annotations
 from health_ally.agent.prompts.system import ONBOARDING_PROMPT
 
 _GOAL_INSTRUCTIONS = """
-When the patient shares their goal, use the set_goal tool with:
-- goal_text: A refined, structured version of their goal
-- raw_patient_text: Their exact words
+When the patient shares their goal:
+1. Summarize what you heard them say about their goal in 1-2 \
+sentences and ask if you captured it correctly
+2. Only after the patient confirms, use the set_goal tool with:
+   - goal_text: A refined, structured version of their goal
+   - raw_patient_text: Their exact words
 
 Do NOT make up a goal for the patient. Wait for them to share one.
 
