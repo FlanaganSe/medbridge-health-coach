@@ -1,8 +1,10 @@
+import { useEffect, useRef, useState } from "react";
 import {
   ShieldCheck,
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
+import clsx from "clsx";
 import type { Phase, SafetyDecision } from "../../types";
 
 // --- Phase Badge ---
@@ -36,10 +38,28 @@ const PHASE_STYLES: Record<Phase, { bg: string; text: string; dot: string }> = {
 };
 
 export function PhaseBadge({ phase }: { phase: Phase }) {
+  const prevPhaseRef = useRef<Phase | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (prevPhaseRef.current !== null && prevPhaseRef.current !== phase) {
+      setTransitioning(true);
+      const timer = setTimeout(() => setTransitioning(false), 600);
+      prevPhaseRef.current = phase;
+      return () => clearTimeout(timer);
+    }
+    prevPhaseRef.current = phase;
+  }, [phase]);
+
   const style = PHASE_STYLES[phase] ?? PHASE_STYLES.pending;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase ${style.bg} ${style.text}`}
+      className={clsx(
+        "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase",
+        style.bg,
+        style.text,
+        transitioning && "animate-phase-pulse",
+      )}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
       {phase.replace(/_/g, " ")}

@@ -47,6 +47,10 @@
   - [x] Step 2 — Add 3 program profiles to `goal.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/goal.py`
   - [x] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
   Commit: 2eb88f0 "feat: per-patient stub data for demo differentiation"
-- [ ] M9: Demo Personas
-  - [ ] Step 1 — Replace `name` values in `DEMO_PATIENTS` array in `App.tsx` with named personas → verify: `cd demo-ui && npm run build`
-  Commit: "feat: replace generic demo patient names with named personas"
+- [x] M9: Demo Personas
+  - [x] Step 1 — Replace `name` values in `DEMO_PATIENTS` array in `App.tsx` with named personas → verify: `cd demo-ui && npm run build`
+  Commit: 7f5552a "feat: replace generic demo patient names with named personas"
+- [ ] M10: Phase Transition Animation
+  - [ ] Step 1 — Add `phase-pulse` keyframe and `animate-phase-pulse` class with reduced-motion guard to `index.css` → verify: `grep -q 'phase-pulse' demo-ui/src/index.css`
+  - [ ] Step 2 — Add phase-change detection (`useRef`/`useEffect`/`useState`) and conditional `animate-phase-pulse` class to `PhaseBadge` in `Badge.tsx` → verify: `cd demo-ui && npm run build`
+  Commit: "feat: add phase transition pulse animation to PhaseBadge"
