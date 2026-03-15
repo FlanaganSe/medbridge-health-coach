@@ -54,9 +54,16 @@
   - [x] Step 1 — Add `phase-pulse` keyframe and `animate-phase-pulse` class with reduced-motion guard to `index.css` → verify: `grep -q 'phase-pulse' demo-ui/src/index.css`
   - [x] Step 2 — Add phase-change detection (`useRef`/`useEffect`/`useState`) and conditional `animate-phase-pulse` class to `PhaseBadge` in `Badge.tsx` → verify: `cd demo-ui && npm run build`
   Commit: 5da187c "feat: add phase transition pulse animation to PhaseBadge"
-- [ ] M11: Timezone Fix — propagate patient timezone through graph state
-  - [ ] Step 1 — Add `patient_timezone: str` to `PatientState` in `state.py` → verify: `grep -q 'patient_timezone' src/health_ally/agent/state.py`
-  - [ ] Step 2 — Populate `patient_timezone` from `patient.timezone` in `load_patient_context` → verify: `grep -q 'patient_timezone' src/health_ally/agent/nodes/context.py`
-  - [ ] Step 3 — Replace hardcoded timezone in `active.py`, `re_engaging.py`, and `goal.py` with `state.get("patient_timezone", "America/New_York")` → verify: `! grep -q '"America/New_York"' src/health_ally/agent/nodes/active.py`
-  - [ ] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
-  Commit: "fix: propagate patient timezone instead of hardcoded America/New_York"
+- [x] M11: Timezone Fix — propagate patient timezone through graph state
+  - [x] Step 1 — Add `patient_timezone: str` to `PatientState` in `state.py` → verify: `grep -q 'patient_timezone' src/health_ally/agent/state.py`
+  - [x] Step 2 — Populate `patient_timezone` from `patient.timezone` in `load_patient_context` → verify: `grep -q 'patient_timezone' src/health_ally/agent/nodes/context.py`
+  - [x] Step 3 — Replace hardcoded timezone in `active.py`, `re_engaging.py`, and `goal.py` with `state.get("patient_timezone", "America/New_York")` → verify: `! grep -q '"America/New_York"' src/health_ally/agent/nodes/active.py`
+  - [x] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: 84e5f62 "fix: propagate patient timezone instead of hardcoded America/New_York"
+- [ ] M12: Test Coverage + Accessibility Polish
+  - [ ] Step 1 — Write `tests/unit/test_save_patient_context.py` (6 tests covering goal, phase transition, alerts, scheduled jobs, patient message reset, empty effects) → verify: `pytest tests/unit/test_save_patient_context.py -v`
+  - [ ] Step 2 — Write `tests/unit/test_retry_generation.py` (3 tests covering retry count increment, outbound message, LLM error) → verify: `pytest tests/unit/test_retry_generation.py -v`
+  - [ ] Step 3 — Write `tests/unit/test_demo_endpoints.py` (4 tests covering seed, idempotency, reset, trigger with no jobs) → verify: `pytest tests/unit/test_demo_endpoints.py -v`
+  - [ ] Step 4 — Add SSE event shape test to `tests/integration/test_chat_endpoint.py` → verify: `pytest tests/integration/test_chat_endpoint.py -v`
+  - [ ] Step 5 — Frontend polish: loading skeletons, confidence format, reduced-motion guards → verify: `cd demo-ui && npm run build`
+  Commit: "test: add coverage for critical paths; polish frontend accessibility"

@@ -80,8 +80,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-phase-pulse {
-    animation: none;
+  .animate-phase-pulse,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-spin,
+  .animate-in-right {
+    animation: none !important;
   }
 }
 

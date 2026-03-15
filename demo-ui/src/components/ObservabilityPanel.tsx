@@ -114,7 +114,7 @@ export function ObservabilityPanel({
           Observability
         </span>
         {loadState === "loading" && (
-          <span className="text-xs text-text-muted">Loading...</span>
+          <span className="inline-block h-3 w-16 rounded bg-border animate-pulse" />
         )}
         {loadState === "error" && (
           <span className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function ObservabilityPanel({
             <div className="min-w-0 flex-1">
               <div className="text-xs text-text-secondary">{d.source}</div>
               <div className="text-[11px] text-text-muted">
-                confidence: {d.confidence.toFixed(2)}
+                confidence: {(d.confidence * 100).toFixed(0)}%
               </div>
             </div>
           </div>

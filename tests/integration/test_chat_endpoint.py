@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
@@ -66,3 +67,48 @@ async def test_chat_requires_auth_headers(app: FastAPI) -> None:
         )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_chat_sse_event_shape(app: FastAPI) -> None:
+    """SSE response contains JSON data events and ends with a done event."""
+    transport = ASGITransport(app=app)  # type: ignore[arg-type]
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/chat",
+            json={"message": "Hi there"},
+            headers={
+                "X-Patient-ID": "p1",
+                "X-Tenant-ID": "t1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    # Parse SSE events from response body
+    body = response.text
+    events = []
+    for chunk in body.split("\n\n"):
+        chunk = chunk.strip()
+        if chunk.startswith("data: "):
+            events.append(json.loads(chunk[len("data: ") :]))
+
+    assert len(events) >= 2  # at least one data event + done
+
+    # All non-done events should be dicts with string keys (node name → state update)
+    data_events = [e for e in events if e.get("type") != "done"]
+    for event in data_events:
+        assert isinstance(event, dict)
+        assert all(isinstance(k, str) for k in event)
+
+    # At least one event contains outbound_message
+    has_outbound = any(
+        "outbound_message" in v
+        for e in data_events
+        for v in (e.values() if isinstance(e, dict) else [])
+        if isinstance(v, dict)
+    )
+    assert has_outbound
+
+    # Last event is the done marker
+    assert events[-1] == {"type": "done"}
