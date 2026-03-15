@@ -404,12 +404,12 @@ async def get_conversation_history(
 ) -> ConversationHistoryResponse:
     """Return conversation history from the LangGraph checkpoint."""
     try:
-        uuid.UUID(patient_id)
+        pid = uuid.UUID(patient_id)
     except ValueError as err:
         raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
 
     graph = request.app.state.graph
-    thread_id = f"patient-{patient_id}"
+    thread_id = f"patient-{pid}"
     config = {"configurable": {"thread_id": thread_id}}
 
     snapshot = await graph.aget_state(config)

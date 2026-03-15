@@ -43,29 +43,36 @@ Four features to make the Health Ally demo reliable, fluid, and architecturally 
   - [ ] Step 3 — Full verification → verify: `ruff check . && ruff format --check . && pyright . && pytest -v`
   Commit: "feat: add conversation history endpoint for demo UI"
 
-- [ ] M3: Conversation history UI — `ObservabilityPanel` gains collapsible section; user/assistant messages with role badges; tool messages compact with amber left border and `tool_name: result` format; `usePatientState` fetches and refreshes it
+- [x] M3: Conversation history UI — `ObservabilityPanel` gains collapsible section; user/assistant messages with role badges; tool messages compact with amber left border and `tool_name: result` format; `usePatientState` fetches and refreshes it
   - [ ] Step 1 — Add `ConversationMessage` interface + extend `PatientState` in `types.ts` → verify: `cd demo-ui && npx tsc --noEmit`
   - [ ] Step 2 — Add `fetchConversationHistory` to `api.ts` + wire into `usePatientState.ts` → verify: `cd demo-ui && npx tsc --noEmit`
   - [ ] Step 3 — Add Conversation section to `ObservabilityPanel.tsx` → verify: `cd demo-ui && npm run build`
   Commit: "feat: render conversation history in observability panel"
 
-- [ ] M4: Token streaming backend — agent nodes switch from `ainvoke` to `astream` + `get_stream_writer()`; `chat.py` emits both `updates` and `custom` events
-  Verify: `ruff check . && pyright . && pytest -v`
+- [x] M4: Token streaming backend — agent nodes switch from `ainvoke` to `astream` + `get_stream_writer()`; `chat.py` emits both `updates` and `custom` events
+  - [x] Step 1 — Add `astream` delegation to `_FakeCoachModel` in `model_gateway.py` → verify: `pytest tests/integration/test_graph_routing.py -v`
+  - [x] Step 2 — Update `chat.py`: `stream_mode=["updates", "custom"]` + tuple unpacking in event loop → verify: `ruff check src/health_ally/api/routes/chat.py`
+  - [x] Step 3 — Update `active.py`, `onboarding.py`, `re_engaging.py`: `ainvoke` → `astream` + `get_stream_writer()` token emission → verify: `ruff check src/health_ally/agent/nodes/`
+  - [x] Step 4 — Update `test_chat_endpoint.py`: mock yields tuples, add token event test → verify: `pytest tests/integration/test_chat_endpoint.py -v`
+  - [x] Step 5 — Full verification → verify: `ruff check . && ruff format --check . && pyright . && pytest -v`
   Commit: "feat: add token-level streaming via custom stream mode"
 
-- [ ] M5: Token streaming frontend — `useSSE.ts` handles `{"type": "token"}` events with text accumulation; bot messages render progressively
-  Verify: `cd demo-ui && npm run build`
+- [x] M5: Token streaming frontend — `useSSE.ts` handles `{"type": "token"}` events with text accumulation; bot messages render progressively
+  - [x] Step 1 — Add token event handler before node-iteration loop in `useSSE.ts` → verify: `cd demo-ui && npx tsc --noEmit`
+  - [x] Step 2 — Full build verification → verify: `cd demo-ui && npm run build`
   Commit: "feat: progressive token rendering in chat panel"
 
-- [ ] M6: Graph layout and data — `graphLayout.ts` with all 14 node positions, ~30 edge paths (including 4 back-edge beziers), cluster colors from `architecture.dot`
-  Verify: `cd demo-ui && npx tsc --noEmit`
+- [x] M6: Graph layout and data — `graphLayout.ts` with all 14 node positions, ~30 edge paths (including 4 back-edge beziers), cluster colors from `architecture.dot`
+  - [x] Step 1 — Create `graphLayout.ts` with types, 14 nodes, 29 edges, 5 clusters, color maps → verify: `cd demo-ui && npx tsc --noEmit`
   Commit: "feat: add graph DAG layout data for architecture visualization"
 
-- [ ] M7: GraphView component — JSX SVG rendering nodes, edges, labels, arrowheads; driven by `PipelineNode[]` prop; replaces `PipelineTrace` in `ChatPanel` with same collapse/expand pattern (auto-expand during streaming, collapse to summary bar after)
-  Verify: `cd demo-ui && npm run build`
+- [x] M7: GraphView component — JSX SVG rendering nodes, edges, labels, arrowheads; driven by `PipelineNode[]` prop; replaces `PipelineTrace` in `ChatPanel` with same collapse/expand pattern (auto-expand during streaming, collapse to summary bar after)
+  - [x] Step 1 — Create `GraphView.tsx`: SVG with clusters, edges (straight + bezier back-edges), terminals, nodes with status coloring, collapse/expand logic → verify: `cd demo-ui && npx tsc --noEmit`
+  - [x] Step 2 — Add `node-pulse` animation to `index.css` + `prefers-reduced-motion` entry → verify: `cd demo-ui && npx tsc --noEmit`
+  - [x] Step 3 — Swap PipelineTrace for GraphView in `ChatPanel.tsx` → verify: `cd demo-ui && npm run build`
   Commit: "feat: live architecture diagram with real-time node highlighting"
 
-- [ ] M8: Final verification + polish — full test suite, lint, typecheck, frontend build; visual polish pass on GraphView edges/labels
+- [x] M8: Final verification + polish — full test suite, lint, typecheck, frontend build; visual polish pass on GraphView edges/labels
   Verify: `ruff check . && ruff format --check . && pyright . && pytest -v && cd demo-ui && npm run build`
   Commit: "chore: final verification and polish for demo experience"
 
