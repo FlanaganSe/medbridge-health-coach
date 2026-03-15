@@ -251,14 +251,14 @@ src/health_ally/
 
 tests/                     # Mirrors src/ structure
   conftest.py              # Session-scoped engine, per-test session, mock_session helper
-  unit/                    # ~180 tests — SQLite, FakeModelGateway, no external deps
+  unit/                    # Unit tests — SQLite, FakeModelGateway, no external deps
   integration/             # Graph routing, thread persistence, endpoint tests
   safety/                  # Crisis detection and clinical boundary routing
   contract/                # Webhook HMAC verification
   evals/                   # 24 DeepEval LLM-as-judge cases (excluded from default pytest)
     conftest.py            # DEEPEVAL_TELEMETRY_OPT_OUT=1, skip-if-no-API-key
 
-alembic/                   # Single initial migration (all 12 tables)
+alembic/                   # Single initial migration (all domain tables)
 demo-ui/                   # React 19 + Vite + Tailwind v4 — chat, pipeline viz, observability (see Demo UI section)
 docs/                      # ADRs, PHI data flow, release runbook, intended use, this file
 ```
@@ -414,7 +414,7 @@ All tables use UUID primary keys, `tenant_id` indexing (multi-tenancy ready), an
 ```
 ┌─────────────────────────────────┐    ┌──────────────────────────────┐
 │ Pool A: SQLAlchemy AsyncEngine  │    │ Pool B: psycopg3 AsyncPool   │
-│ - Domain tables (12 ORM models) │    │ - LangGraph checkpoint tables │
+│ - Domain tables (10 ORM models) │    │ - LangGraph checkpoint tables │
 │ - pool_size=5, max_overflow=5   │    │ - min_size=2, max_size=3      │
 │ - pool_pre_ping=True            │    │ - AUTOCOMMIT, dict_row         │
 │ - expire_on_commit=False        │    │ - prepare_threshold=0          │
@@ -680,7 +680,7 @@ Pure ASGI middleware (not `BaseHTTPMiddleware` — which buffers SSE responses).
 
 ## Important decisions and tradeoffs
 
-Full ADR log: `docs/decisions.md` (ADR-001 through ADR-011). Key highlights:
+Full ADR log: `docs/decisions.md` (ADR-001 through ADR-013). Key highlights:
 
 **Single StateGraph, no subgraphs (ADR-001).** Five phases don't justify subgraph complexity. Migration to subgraphs post-production changes the LangGraph checkpoint namespace scheme, requiring checkpoint migration — a HIPAA change-management event because blobs contain PHI.
 
@@ -703,6 +703,10 @@ Full ADR log: `docs/decisions.md` (ADR-001 through ADR-011). Key highlights:
 **Dormant node gated on LLM success (ADR-010).** Phase transition DORMANT → RE_ENGAGING is only accumulated after a successful `coach_model.ainvoke()`. On LLM failure, the patient stays in DORMANT so the next attempt can succeed — prevents silent state corruption with no reply.
 
 **Demo UI overhaul (ADR-011).** Full rewrite from ~750 LOC inline-styled React to 2,400+ LOC Tailwind CSS v4 implementation. SSE parser extracts full node data (pipeline, tools, safety), event-driven state refresh replaces 2s polling, tool call-result pairing uses `tool_call_id`.
+
+**Demo experience polish (ADR-012).** Checkpoint clearing on patient reset via `adelete_thread`, token-level streaming via LangGraph `custom` stream mode with `get_stream_writer()`, conversation history endpoint reading from checkpoint, live architecture diagram (subsequently replaced — see ADR-013).
+
+**Pipeline stepper replaces architecture DAG (ADR-013).** The 530-line SVG DAG was visually dense and fragile. Replaced with a 96-line vertical stepper that dynamically shows nodes as they fire with status icons (CircleCheck/Loader2/Circle). Same `PipelineNode[]` data contract, no backend changes.
 
 ---
 
@@ -753,7 +757,7 @@ Three horizontal layers — **TopBar** → **DemoControlBar** → **MainBody** (
 3. **ChatPanel** — Full SSE streaming chat:
    - **Three message types:** bot bubble (blue avatar, gray bg), user bubble (dark bg, white text), tool call card (amber bg, wrench icon, JetBrains Mono `Tool: {name}` label).
    - **Suggestion chips** — phase-aware conversation starters shown when the chat is empty. Different suggestions per phase (active, onboarding, re_engaging). Clicking a chip sends it as a message.
-   - **Pipeline trace** — horizontal strip above messages showing graph nodes completing in real-time during streaming: running (blue pulse) → complete (green check). Collapses after stream completes; re-expands on next message.
+   - **Pipeline stepper** — compact vertical stepper above messages showing graph nodes as they execute: running (blue spinning Loader2) → complete (green CircleCheck). Collapses to a summary bar after stream completes; stays collapsed across subsequent messages (user-controlled expand/collapse).
    - **Progressive streaming render** — text appears as SSE chunks arrive, with bouncing-dot typing indicator.
    - **Safety toast** — slide-in toast (top-right) when safety classification fires. Shows decision label + confidence score. Auto-dismisses after 5s.
 4. **ObservabilityPanel** — 420px fixed-width sidebar with 6 sections:
