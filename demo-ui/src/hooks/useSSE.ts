@@ -123,6 +123,13 @@ export function useSSE(): UseSSEReturn {
               return;
             }
 
+            // Handle token-level streaming chunks from custom stream mode
+            if (parsed.type === "token" && typeof parsed.content === "string") {
+              outboundMessage += parsed.content;
+              setStreamingText(outboundMessage);
+              return;
+            }
+
             // Each event is { node_name: { ...state_fields } }
             for (const [nodeName, nodeData] of Object.entries(parsed)) {
               const node = nodeData as Record<string, unknown>;
@@ -152,6 +159,10 @@ export function useSSE(): UseSSEReturn {
               ) {
                 outboundMessage = node.outbound_message;
                 setStreamingText(outboundMessage);
+              } else if ("outbound_message" in node && !node.outbound_message) {
+                // Agent deferred to tool_node — clear stale token accumulation
+                outboundMessage = "";
+                setStreamingText("");
               }
 
               // Extract safety decision
