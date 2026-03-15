@@ -1,5 +1,6 @@
 import type {
   AlertItem,
+  AuditEventItem,
   GoalItem,
   Phase,
   ResetPatientResponse,
@@ -74,6 +75,15 @@ export async function fetchScheduledJobs(
     `/v1/demo/scheduled-jobs/${patientId}`,
   );
   return r.jobs;
+}
+
+export async function fetchAuditEvents(
+  patientId: string,
+): Promise<AuditEventItem[]> {
+  const r = await request<{ events: AuditEventItem[] }>(
+    `/v1/demo/audit-events/${patientId}`,
+  );
+  return r.events;
 }
 
 // --- State Endpoints ---

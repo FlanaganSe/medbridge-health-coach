@@ -110,4 +110,5 @@ export interface PatientState {
   alerts: AlertItem[];
   safetyDecisions: SafetyDecisionItem[];
   scheduledJobs: ScheduledJobItem[];
+  auditEvents: AuditEventItem[];
 }

@@ -79,6 +79,23 @@ function EmptyState({ text }: { text: string }) {
   return <div className="text-xs italic text-text-muted">{text}</div>;
 }
 
+const GREEN_OUTCOMES = new Set(["allowed", "safe", "success"]);
+const RED_OUTCOMES = new Set(["denied", "block", "blocked", "clinical_boundary", "crisis"]);
+
+function AuditOutcomeBadge({ outcome }: { outcome: string }) {
+  const color = GREEN_OUTCOMES.has(outcome)
+    ? "bg-green-badge-bg text-green-badge-text"
+    : RED_OUTCOMES.has(outcome)
+      ? "bg-red-badge-bg text-red-badge-text"
+      : "bg-amber-badge-bg text-amber-badge-text";
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${color}`}>
+      {outcome}
+    </span>
+  );
+}
+
 export function ObservabilityPanel({
   state,
   loadState,
@@ -200,7 +217,7 @@ export function ObservabilityPanel({
       </Section>
 
       {/* Scheduled Jobs */}
-      <Section border={false}>
+      <Section>
         <SectionHeader
           title="Scheduled Jobs"
           count={state.scheduledJobs.length}
@@ -226,6 +243,35 @@ export function ObservabilityPanel({
             <JobStatusBadge status={j.status} />
           </div>
         ))}
+      </Section>
+
+      {/* Audit Trail */}
+      <Section border={false}>
+        <SectionHeader
+          title="Audit Trail"
+          count={state.auditEvents.length}
+        />
+        {state.auditEvents.length === 0 && (
+          <EmptyState text="No audit events" />
+        )}
+        {state.auditEvents.slice(0, 10).map((e) => (
+          <div key={e.id} className="flex items-center justify-between">
+            <div>
+              <div className="font-mono text-xs font-medium text-text-primary">
+                {e.event_type}
+              </div>
+              <div className="text-[11px] text-text-muted">
+                {formatTime(e.created_at)}
+              </div>
+            </div>
+            <AuditOutcomeBadge outcome={e.outcome} />
+          </div>
+        ))}
+        {state.auditEvents.length > 10 && (
+          <div className="text-xs font-medium text-text-secondary">
+            +{state.auditEvents.length - 10} more events
+          </div>
+        )}
       </Section>
     </div>
   );

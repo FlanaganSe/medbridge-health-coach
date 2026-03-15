@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchAlerts,
+  fetchAuditEvents,
   fetchGoals,
   fetchPhase,
   fetchSafetyDecisions,
@@ -16,6 +17,7 @@ const EMPTY_STATE: PatientState = {
   alerts: [],
   safetyDecisions: [],
   scheduledJobs: [],
+  auditEvents: [],
 };
 
 type LoadState = "loading" | "loaded" | "error";
@@ -41,18 +43,19 @@ export function usePatientState(
     // Capture the current token so we can detect if the patient changed mid-fetch
     const token = tokenRef.current;
     try {
-      const [phase, goals, alerts, safetyDecisions, scheduledJobs] =
+      const [phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents] =
         await Promise.all([
           fetchPhase(patientId, tenantId).catch(() => "pending" as const),
           fetchGoals(patientId, tenantId).catch(() => []),
           fetchAlerts(patientId, tenantId).catch(() => []),
           fetchSafetyDecisions(patientId, tenantId).catch(() => []),
           fetchScheduledJobs(patientId).catch(() => []),
+          fetchAuditEvents(patientId).catch(() => []),
         ]);
 
       if (tokenRef.current !== token) return;
 
-      setState({ phase, goals, alerts, safetyDecisions, scheduledJobs });
+      setState({ phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents });
       setLoadState("loaded");
       setLastUpdated(new Date());
     } catch {
