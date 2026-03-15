@@ -7,6 +7,55 @@ import { ChatMessageBubble } from "./ChatMessage";
 import { PipelineTrace } from "./PipelineTrace";
 import { SafetyToast } from "./SafetyToast";
 
+function getSuggestions(phase: Phase): string[] {
+  switch (phase) {
+    case "active":
+      return [
+        "How am I doing with my exercises?",
+        "I need help staying on track",
+      ];
+    case "re_engaging":
+    case "dormant":
+      return [
+        "I'm back and ready to try again",
+        "Can we pick up where we left off?",
+      ];
+    default:
+      return [
+        "Hi! I'd like to get started",
+        "What can you help me with?",
+      ];
+  }
+}
+
+function SuggestionChips({
+  phase,
+  onSelect,
+}: {
+  phase: Phase;
+  onSelect: (text: string) => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3">
+      <p className="text-sm text-text-muted">
+        Send a message to start the conversation.
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {getSuggestions(phase).map((text) => (
+          <button
+            key={text}
+            type="button"
+            onClick={() => onSelect(text)}
+            className="rounded-full border border-border px-4 py-2 text-sm text-text-secondary hover:bg-bg-faint"
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface ChatPanelProps {
   patientId: string;
   tenantId: string;
@@ -42,11 +91,11 @@ export function ChatPanel({
     setMessages([]);
   }, [patientId]);
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || isStreaming) return;
 
-    setInput("");
+    if (!overrideText) setInput("");
 
     // Add user message immediately
     const userMsg: ChatMessage = {
@@ -74,6 +123,11 @@ export function ChatPanel({
     onStreamComplete();
   }, [input, isStreaming, patientId, tenantId, send, onStreamComplete]);
 
+  const handleChipSelect = useCallback(
+    (text: string) => { void handleSend(text); },
+    [handleSend],
+  );
+
   return (
     <div className="flex flex-1 flex-col border-r border-border bg-white">
       {/* Header */}
@@ -100,9 +154,7 @@ export function ChatPanel({
       {/* Messages */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
         {messages.length === 0 && !isStreaming && (
-          <div className="flex flex-1 items-center justify-center text-sm text-text-muted">
-            Send a message to start the conversation.
-          </div>
+          <SuggestionChips phase={phase} onSelect={handleChipSelect} />
         )}
 
         {messages.map((msg) => (
