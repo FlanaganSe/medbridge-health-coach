@@ -42,8 +42,11 @@
   - [x] Step 2 — Update `dormant.py` to use `get_system_prompt("dormant")` instead of `build_re_engaging_prompt("patient")` → verify: `grep -q 'get_system_prompt' src/health_ally/agent/nodes/dormant.py`
   - [x] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
   Commit: 4e1ebbe "feat: add dedicated dormant welcome-back prompt"
-- [ ] M8: Per-Patient Stub Data
-  - [ ] Step 1 — Add 3 adherence profiles to `adherence.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/adherence.py`
-  - [ ] Step 2 — Add 3 program profiles to `goal.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/goal.py`
-  - [ ] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
-  Commit: "feat: per-patient stub data for demo differentiation"
+- [x] M8: Per-Patient Stub Data
+  - [x] Step 1 — Add 3 adherence profiles to `adherence.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/adherence.py`
+  - [x] Step 2 — Add 3 program profiles to `goal.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/goal.py`
+  - [x] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: 2eb88f0 "feat: per-patient stub data for demo differentiation"
+- [ ] M9: Demo Personas
+  - [ ] Step 1 — Replace `name` values in `DEMO_PATIENTS` array in `App.tsx` with named personas → verify: `cd demo-ui && npm run build`
+  Commit: "feat: replace generic demo patient names with named personas"

@@ -6,8 +6,8 @@ import { ObservabilityPanel } from "./components/ObservabilityPanel";
 import { TopBar } from "./components/TopBar";
 
 const DEMO_PATIENTS = [
-  { id: "00000000-0000-0000-0000-000000000001", name: "Demo Patient 1" },
-  { id: "00000000-0000-0000-0000-000000000002", name: "Demo Patient 2" },
+  { id: "00000000-0000-0000-0000-000000000001", name: "Sarah M. — Knee Rehab" },
+  { id: "00000000-0000-0000-0000-000000000002", name: "James T. — Shoulder Recovery" },
 ];
 
 const TENANT_ID = "demo-tenant";
