@@ -789,8 +789,7 @@ demo-ui/src/
     DemoControlBar.tsx           # Demo action buttons + status bar
     ChatPanel.tsx                # Chat header + messages + input + safety toast
     ChatMessage.tsx              # Bot/user/tool message variants
-    GraphView.tsx                # SVG DAG rendering 14-node architecture with live status highlighting
-    graphLayout.ts               # Static node coordinates, edge paths, cluster groupings for the SVG
+    PipelineStepper.tsx           # Vertical stepper showing pipeline nodes as they execute with status icons
     ObservabilityPanel.tsx       # Sidebar: phase, goals, alerts, safety, jobs, conversation history
     SafetyToast.tsx              # Slide-in safety classification notification
     ui/Badge.tsx                 # PhaseBadge, AlertBadge, SafetyBadge, etc.
