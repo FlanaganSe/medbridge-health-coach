@@ -11,4 +11,5 @@ description: Code style and established patterns.
 - Async-first: prefer `async def` for I/O-bound operations
 
 ## Established Patterns
-<!-- Add as discovered: **Name**: Description. See `path/to/example.py`. -->
+
+- **Content extraction**: Use `extract_text_content()` from `agent/content.py` to get text from `AIMessage.content` — never `str(response.content)`. See `agent/nodes/active.py`.

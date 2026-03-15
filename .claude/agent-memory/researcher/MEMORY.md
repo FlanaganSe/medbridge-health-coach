@@ -7,7 +7,7 @@
 - Frontend stack: React 19, TypeScript 5.5 strict, Vite 6, Tailwind v4 (CSS-first, no tailwind.config.js)
 - Requirements: `docs/requirements.md` (original spec; subgraph note is superseded by ADR-001)
 - Authoritative system docs: `docs/product-overview.md` (comprehensive, current)
-- ADRs: `docs/decisions.md` (append-only, ADR-001 through ADR-012)
+- ADRs: `docs/decisions.md` (append-only, ADR-001 through ADR-014)
 - NOTE: All `.claude/plans/` files (prd.md, research.md, plan.md, research-*.md) are ephemeral — cleaned up after each task cycle. Do not reference them as permanent sources.
 
 ## LangGraph 1.x API Patterns (verified 2026-03-10)
@@ -124,7 +124,7 @@
 - `locking.py` correctly guards advisory lock behind `if "sqlite" in str(engine.url)`.
 
 ## Test Quality and Coverage (updated 2026-03-15)
-- 34 total files: 22 unit, 8 integration, 2 safety, 1 contract, 3 evals (previously 20 unit — 2 added)
+- 35 total files: 23 unit, 8 integration, 2 safety, 1 contract, 3 evals
 - New unit test files since prior research: `test_save_patient_context.py`, `test_retry_generation.py`, `test_tools.py`, `test_demo_endpoints.py`, `test_jobs.py`
 - New integration test files: `test_chat_endpoint.py`, `test_followup_lifecycle.py`, `test_graph_routing.py`, `test_onboarding_flow.py`
 - `@pytest.mark.integration` is declared but NEVER applied to any test — the marker is vestigial
@@ -184,6 +184,13 @@
 - `_insert_on_conflict_ignore()` bug in `webhooks.py:29` — `try/except ImportError` dialect guard is unreachable; always uses PG dialect → crashes on SQLite
 - Demo reset (`POST /v1/demo/reset-patient`) clears LangGraph checkpoint via `adelete_thread` (fixed 2026-03-15)
 - PHI scrubber processes 18 named fields + SSN/email regex, runs last in structlog chain after format_exc_info
+
+## AIMessage Content Format — Fixed (2026-03-15, ADR-014)
+- `AIMessage.content` in langchain-anthropic is `str | list[dict]` — `list[dict]` when tools are bound during streaming (`coerce_content_to_string=False` in `ChatAnthropic._stream()`)
+- Fixed: all 5 agent nodes now use `extract_text_content()` from `agent/content.py` instead of `str(response.content)`
+- Fixed: streaming token extraction in 3 tool-using nodes now uses `extract_text_content(chunk.content)` instead of `isinstance(chunk.content, str)` guard (which silently dropped all tokens)
+- `dormant_node` and `retry_generation` use `ainvoke()` without tools — `_format_output()` coerces to `str`, so they were not broken but now use the helper defensively
+- `demo.py:_serialize_message` (conversation history) was already correct with its own `isinstance(raw, list)` unwrap
 
 ## Scheduling / Outbox / Observability (researched 2026-03-10)
 - SQLAlchemy 2.0 async SKIP LOCKED: `.with_for_update(skip_locked=True)` — identical in sync/async
