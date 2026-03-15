@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import { FlaskConical, RefreshCw, RotateCcw, UserPlus, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
@@ -17,6 +18,7 @@ interface DemoControlBarProps {
   tenantId: string;
   onPatientSeeded: (id: string) => void;
   onStateChanged: () => void;
+  onReset: () => void;
 }
 
 export function DemoControlBar({
@@ -25,11 +27,15 @@ export function DemoControlBar({
   tenantId,
   onPatientSeeded,
   onStateChanged,
+  onReset,
 }: DemoControlBarProps) {
   const [seedStatus, setSeedStatus] = useState<Status>("idle");
   const [triggerStatus, setTriggerStatus] = useState<Status>("idle");
   const [resetStatus, setResetStatus] = useState<Status>("idle");
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,11 +45,14 @@ export function DemoControlBar({
     };
   }, []);
 
-  const showStatus = useCallback((msg: string) => {
-    setStatusMessage(msg);
-    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-    statusTimerRef.current = setTimeout(() => setStatusMessage(""), 4000);
-  }, []);
+  const showStatus = useCallback(
+    (text: string, type: "success" | "error") => {
+      setStatusMessage({ text, type });
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = setTimeout(() => setStatusMessage(null), 4000);
+    },
+    [],
+  );
 
   const handleSeed = useCallback(async () => {
     setSeedStatus("loading");
@@ -51,11 +60,11 @@ export function DemoControlBar({
       const data = await api.seedPatient(tenantId, externalPatientId);
       onPatientSeeded(data.patient_id);
       setSeedStatus("success");
-      showStatus(`Patient seeded (${data.phase})`);
+      showStatus(`Patient seeded (${data.phase})`, "success");
       onStateChanged();
     } catch (err) {
       setSeedStatus("error");
-      showStatus(`Seed failed: ${errorMessage(err)}`);
+      showStatus(`Seed failed: ${errorMessage(err)}`, "error");
     }
   }, [tenantId, externalPatientId, onPatientSeeded, showStatus, onStateChanged]);
 
@@ -65,11 +74,11 @@ export function DemoControlBar({
       const data: TriggerFollowupResponse =
         await api.triggerFollowup(patientId);
       setTriggerStatus("success");
-      showStatus(`Expedited ${data.job_type}`);
+      showStatus(`Expedited ${data.job_type}`, "success");
       onStateChanged();
     } catch (err) {
       setTriggerStatus("error");
-      showStatus(`No pending check-ins: ${errorMessage(err)}`);
+      showStatus(`No pending check-ins: ${errorMessage(err)}`, "error");
     }
   }, [patientId, showStatus, onStateChanged]);
 
@@ -81,13 +90,15 @@ export function DemoControlBar({
       setResetStatus("success");
       showStatus(
         `Reset: ${data.deleted_goals} goals, ${data.deleted_jobs} jobs removed`,
+        "success",
       );
       onStateChanged();
+      onReset();
     } catch (err) {
       setResetStatus("error");
-      showStatus(`Reset failed: ${errorMessage(err)}`);
+      showStatus(`Reset failed: ${errorMessage(err)}`, "error");
     }
-  }, [patientId, showStatus, onStateChanged]);
+  }, [patientId, showStatus, onStateChanged, onReset]);
 
   const handleRefreshJobs = useCallback(() => {
     onStateChanged();
@@ -135,8 +146,15 @@ export function DemoControlBar({
 
       {/* Status message */}
       {statusMessage && (
-        <div className="border-b border-border bg-amber-badge-bg px-6 py-2 text-[12px] text-amber-badge-text">
-          {statusMessage}
+        <div
+          className={clsx(
+            "border-b border-border px-6 py-2 text-[12px]",
+            statusMessage.type === "success"
+              ? "bg-green-badge-bg text-green-badge-text"
+              : "bg-red-badge-bg text-red-badge-text",
+          )}
+        >
+          {statusMessage.text}
         </div>
       )}
 

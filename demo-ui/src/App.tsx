@@ -17,6 +17,7 @@ export function App() {
     DEMO_PATIENTS[0].id,
   );
   const [internalId, setInternalId] = useState<string | null>(null);
+  const [resetKey, setResetKey] = useState(0);
 
   const effectivePatientId = internalId ?? externalPatientId;
 
@@ -34,6 +35,10 @@ export function App() {
     setInternalId(id);
   }, []);
 
+  const handleReset = useCallback(() => {
+    setResetKey((k) => k + 1);
+  }, []);
+
   return (
     <div className="flex h-screen flex-col bg-bg-page">
       <TopBar
@@ -48,9 +53,11 @@ export function App() {
         tenantId={TENANT_ID}
         onPatientSeeded={handlePatientSeeded}
         onStateChanged={refresh}
+        onReset={handleReset}
       />
       <div className="flex min-h-0 flex-1">
         <ChatPanel
+          key={resetKey}
           patientId={effectivePatientId}
           tenantId={TENANT_ID}
           phase={state.phase}

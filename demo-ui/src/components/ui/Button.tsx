@@ -63,19 +63,17 @@ export function Button({
           />
         </svg>
       ) : (
-        <>
-          {Icon && (
-            <Icon
-              size={14}
-              className={clsx(
-                variant === "secondary" &&
-                  (danger ? "text-red-badge-text" : "text-text-secondary"),
-              )}
-            />
-          )}
-          {label}
-        </>
+        Icon && (
+          <Icon
+            size={14}
+            className={clsx(
+              variant === "secondary" &&
+                (danger ? "text-red-badge-text" : "text-text-secondary"),
+            )}
+          />
+        )
       )}
+      {label}
     </button>
   );
 }

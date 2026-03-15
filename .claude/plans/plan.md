@@ -15,3 +15,10 @@
   - [x] Step 3 — Add `.prose` styles to `index.css` → verify: `grep -q '.prose' demo-ui/src/index.css`
   - [x] Step 4 — Build succeeds → verify: `cd demo-ui && npm run build`
   Commit: "feat: render markdown in bot chat messages"
+- [ ] M3: Demo UX Quick Wins
+  - [ ] Step 1 — Clear chat on patient reset (resetKey in App.tsx + onReset callback) → verify: `cd demo-ui && npx tsc --noEmit`
+  - [ ] Step 2 — Distinct pipeline node labels in useSSE.ts → verify: `grep -q 'Onboarding' demo-ui/src/hooks/useSSE.ts`
+  - [ ] Step 3 — Color-differentiate success/error status messages in DemoControlBar.tsx → verify: `cd demo-ui && npx tsc --noEmit`
+  - [ ] Step 4 — Button loading width stability in Button.tsx → verify: `cd demo-ui && npx tsc --noEmit`
+  - [ ] Step 5 — Fix muted text contrast (#B0B0B0 → #767676) in index.css → verify: `grep -q '767676' demo-ui/src/index.css`
+  Commit: "fix: demo UX quick wins — reset clears chat, distinct labels, status colors, button stability, contrast"
