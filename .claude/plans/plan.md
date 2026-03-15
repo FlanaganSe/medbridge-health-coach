@@ -31,9 +31,14 @@
   - [x] Step 3 — Wire `fetchAuditEvents` into `usePatientState.ts` `Promise.all` → verify: `grep -q 'fetchAuditEvents' demo-ui/src/hooks/usePatientState.ts`
   - [x] Step 4 — Add Audit Trail section to `ObservabilityPanel.tsx` → verify: `cd demo-ui && npm run build`
   Commit: 84442a1 "feat: wire audit events into observability panel"
-- [ ] M6: MI Fidelity — System Prompt Improvements
-  - [ ] Step 1 — Add "Communication Techniques" OARS section to `BASE_SYSTEM_PROMPT` in `system.py` → verify: `grep -q 'Communication Techniques' src/health_ally/agent/prompts/system.py`
-  - [ ] Step 2 — Replace directive language in `BASE_SYSTEM_PROMPT` and `ACTIVE_PROMPT` with autonomy-supportive framing → verify: `! grep -q 'encourage consistency' src/health_ally/agent/prompts/system.py`
-  - [ ] Step 3 — Add summary-before-confirmation instruction to `_GOAL_INSTRUCTIONS` in `onboarding.py` → verify: `grep -q 'summarize' src/health_ally/agent/prompts/onboarding.py`
-  - [ ] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
-  Commit: "feat: improve system prompts with MI-aligned OARS techniques"
+- [x] M6: MI Fidelity — System Prompt Improvements
+  - [x] Step 1 — Add "Communication Techniques" OARS section to `BASE_SYSTEM_PROMPT` in `system.py` → verify: `grep -q 'Communication Techniques' src/health_ally/agent/prompts/system.py`
+  - [x] Step 2 — Replace directive language in `BASE_SYSTEM_PROMPT` and `ACTIVE_PROMPT` with autonomy-supportive framing → verify: `! grep -q 'encourage consistency' src/health_ally/agent/prompts/system.py`
+  - [x] Step 3 — Add summary-before-confirmation instruction to `_GOAL_INSTRUCTIONS` in `onboarding.py` → verify: `grep -q 'summarize' src/health_ally/agent/prompts/onboarding.py`
+  - [x] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: f15b8dd "feat: improve system prompts with MI-aligned OARS techniques"
+- [ ] M7: Dormant Welcome-Back Prompt
+  - [ ] Step 1 — Add `DORMANT_PROMPT` to `system.py` and register in `PHASE_PROMPTS` → verify: `grep -q 'DORMANT_PROMPT' src/health_ally/agent/prompts/system.py`
+  - [ ] Step 2 — Update `dormant.py` to use `get_system_prompt("dormant")` instead of `build_re_engaging_prompt("patient")` → verify: `grep -q 'get_system_prompt' src/health_ally/agent/nodes/dormant.py`
+  - [ ] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: "feat: add dedicated dormant welcome-back prompt"

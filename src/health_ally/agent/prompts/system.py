@@ -83,10 +83,26 @@ Keep messages short and low-pressure. One question at a time.
 """
 )
 
+DORMANT_PROMPT = (
+    BASE_SYSTEM_PROMPT
+    + """
+## Current Task: Welcome Back
+The patient has returned after a period of inactivity. Your goals:
+1. Welcome them back warmly — no judgment about the gap
+2. If you know their previous goal, briefly reference it
+3. Ask one simple, open question to re-engage
+4. Keep it very short — this is about reconnecting, not catching up
+
+Do NOT recap everything they missed. Do NOT ask why they were away.
+Focus entirely on moving forward.
+"""
+)
+
 PHASE_PROMPTS: dict[str, str] = {
     "onboarding": ONBOARDING_PROMPT,
     "active": ACTIVE_PROMPT,
     "re_engaging": RE_ENGAGING_PROMPT,
+    "dormant": DORMANT_PROMPT,
 }
 
 

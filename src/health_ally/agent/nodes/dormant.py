@@ -11,7 +11,7 @@ import structlog
 
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.effects import accumulate_effects
-from health_ally.agent.prompts.re_engaging import build_re_engaging_prompt
+from health_ally.agent.prompts.system import get_system_prompt
 from health_ally.agent.state import PatientState  # noqa: TC001
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ async def dormant_node(
     if invocation_source == "patient":
         # Generate welcome-back response via LLM
         ctx = get_coach_context(config)
-        system_prompt = build_re_engaging_prompt("patient")
+        system_prompt = get_system_prompt("dormant")
         coach_model = ctx.model_gateway.get_chat_model("coach")
         messages = list(state.get("messages", []))
 
