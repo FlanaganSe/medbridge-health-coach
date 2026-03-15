@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { PipelineNode } from "../types";
 import {
   CLUSTERS,
@@ -56,25 +56,26 @@ function backEdgePath(
 export function GraphView({ nodes, isStreaming }: GraphViewProps) {
   const [expanded, setExpanded] = useState(true);
 
-  // Re-expand when a new stream starts
-  useEffect(() => {
-    if (isStreaming) setExpanded(true);
-  }, [isStreaming]);
-
   if (nodes.length === 0) return null;
 
   const done = !isStreaming;
 
   // Collapsed summary bar
-  if (done && !expanded) {
+  if (!expanded) {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="flex w-full items-center gap-2 border-b border-border bg-green-badge-bg px-6 py-2 text-[11px] text-green-badge-text hover:bg-green-badge-bg/80"
+        className={`flex w-full items-center gap-2 border-b border-border px-6 py-2 text-[11px] hover:opacity-80 ${
+          done
+            ? "bg-green-badge-bg text-green-badge-text"
+            : "bg-blue-badge-bg text-blue-badge-text"
+        }`}
       >
-        <Check size={12} />
+        {done && <Check size={12} />}
         <span>
-          Pipeline completed ({nodes.length} nodes)
+          {done
+            ? `Pipeline completed (${nodes.length} nodes)`
+            : `Pipeline running (${nodes.length} nodes)`}
         </span>
         <span className="ml-auto text-text-muted">click to expand</span>
       </button>
