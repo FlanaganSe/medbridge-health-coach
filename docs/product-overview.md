@@ -84,7 +84,7 @@ Acquire patient_advisory_lock(patient_id)    ← serializes concurrent access
 │        │ POSSIBLE ──► routine alert (pending) → continue    │
 │        │ NONE                                               │
 │        ▼                                                    │
-│  4. manage_history (trim/summarize if needed)               │
+│  4. manage_history (placeholder — pass-through)              │
 │        │                                                    │
 │        ▼                                                    │
 │  5. phase_router (deterministic dispatch)                   │
@@ -177,12 +177,12 @@ src/health_ally/
     graph.py               # StateGraph: 14 nodes, conditional edges, graph compilation
     state.py               # PatientState TypedDict, PendingEffects TypedDict
     context.py             # CoachContext dataclass, create_coach_context() factory
-    effects.py             # accumulate_effect(), merge_effects() — pure functions
+    effects.py             # accumulate_effects() — pure function for pending effects merging
     nodes/                 # One module per graph node (14 total)
       consent.py           # consent_gate: per-interaction consent verification
       context.py           # load_patient_context, save_patient_context (sole DB writer)
       crisis_check.py      # crisis_check: input-side LLM classifier
-      history.py           # manage_history: context window management
+      history.py           # manage_history: placeholder pass-through (future context window management)
       router.py            # phase_router: deterministic phase dispatch
       pending.py           # pending_node: template welcome, PENDING → ONBOARDING
       onboarding.py        # onboarding_agent: LLM goal discovery
@@ -241,7 +241,7 @@ src/health_ally/
 
   persistence/             # Database layer
     db.py                  # create_engine(), session factory, LangGraph pool, checkpointer
-    models.py              # 12 SQLAlchemy ORM models (all UUID PKs, tenant_id indexed)
+    models.py              # 10 SQLAlchemy ORM models (all UUID PKs, tenant_id indexed)
     locking.py             # patient_advisory_lock() — pg_advisory_lock with AUTOCOMMIT
     repositories/          # BaseRepository CRUD, PatientRepository, AuditRepository
     schemas/               # Pydantic schemas for API request/response validation
@@ -310,7 +310,7 @@ class PendingEffects(TypedDict, total=False):
     audit_events: list[dict[str, object]]   # Append
 ```
 
-`accumulate_effect()` merges new items into existing pending effects (lists append, scalars overwrite). `save_patient_context` flushes everything in a single database transaction — either all effects persist or none do.
+`accumulate_effects()` merges new items into existing pending effects (lists append, scalars overwrite). `save_patient_context` flushes everything in a single database transaction — either all effects persist or none do.
 
 **Why this matters:** If a graph invocation fails partway through (LLM timeout, safety classifier error), the domain database is left unchanged. Replaying the graph from the LangGraph checkpoint is safe because no partial writes occurred. This is the foundational invariant that makes the system crash-safe.
 
@@ -390,7 +390,7 @@ An abstract factory pattern that returns the appropriate LLM model by purpose:
 
 ## Data layer
 
-### ORM models (12 tables)
+### ORM models (10 tables)
 
 All tables use UUID primary keys, `tenant_id` indexing (multi-tenancy ready), and `created_at`/`updated_at` timestamps. Phase and status columns use `StrEnum + String(20)` (not native PG ENUM) for SQLite test compatibility.
 
@@ -605,9 +605,9 @@ System prompts are dynamically built based on context:
 
 | Category | Count | Backend | External deps | Default run |
 |---|---|---|---|---|
-| Unit | ~180 | SQLite in-memory | None | Yes |
-| Integration | 28 | SQLite in-memory | None | Yes |
-| Safety | 8 | None (pure logic) | None | Yes |
+| Unit | 157 | SQLite in-memory | None | Yes |
+| Integration | 31 | SQLite in-memory | None | Yes |
+| Safety | 7 | None (pure logic) | None | Yes |
 | Contract | 3 | None | None | Yes |
 | Evals | 24 | None | Anthropic API key | No (`--ignore=tests/evals`) |
 
@@ -696,7 +696,7 @@ Full ADR log: `docs/decisions.md` (ADR-001 through ADR-011). Key highlights:
 
 **PHI scrubbing as last processor (ADR-007).** Must run after `format_exc_info` — otherwise exception tracebacks can re-introduce PHI that was already scrubbed from fields.
 
-**Code cleanup patterns (ADR-008).** Extracted `accumulate_effect()`, `create_coach_context()`, channel factories, pure ASGI middleware. Eliminated 3 identical context factory closures, 8 copy-pasted effect accumulation blocks, and 4 identical mock session helpers.
+**Code cleanup patterns (ADR-008).** Extracted `accumulate_effects()`, `create_coach_context()`, channel factories, pure ASGI middleware. Eliminated 3 identical context factory closures, 8 copy-pasted effect accumulation blocks, and 4 identical mock session helpers.
 
 **Same-origin demo UI serving (ADR-009).** The Vite build output is bundled into the Docker image and served via Starlette `StaticFiles(html=True)` at `/`. Eliminates CORS entirely. API routes registered before the mount take priority. No `aiofiles` needed (Starlette uses `anyio` since 0.21.0).
 
@@ -752,15 +752,17 @@ Three horizontal layers — **TopBar** → **DemoControlBar** → **MainBody** (
 2. **DemoControlBar** — Flask icon + 4 action buttons: Seed Patient, Run Next Check-in (renamed from "Trigger Follow-up" for clarity — it sets the earliest pending `ScheduledJob.scheduled_at` to now), Reset Patient (with confirmation dialog), Refresh. Status messages shown in amber bar.
 3. **ChatPanel** — Full SSE streaming chat:
    - **Three message types:** bot bubble (blue avatar, gray bg), user bubble (dark bg, white text), tool call card (amber bg, wrench icon, JetBrains Mono `Tool: {name}` label).
+   - **Suggestion chips** — phase-aware conversation starters shown when the chat is empty. Different suggestions per phase (active, onboarding, re_engaging). Clicking a chip sends it as a message.
    - **Pipeline trace** — horizontal strip above messages showing graph nodes completing in real-time during streaming: running (blue pulse) → complete (green check). Collapses after stream completes; re-expands on next message.
    - **Progressive streaming render** — text appears as SSE chunks arrive, with bouncing-dot typing indicator.
    - **Safety toast** — slide-in toast (top-right) when safety classification fires. Shows decision label + confidence score. Auto-dismisses after 5s.
-4. **ObservabilityPanel** — 420px fixed-width sidebar with 5 sections:
+4. **ObservabilityPanel** — 420px fixed-width sidebar with 6 sections:
    - Phase (PhaseBadge with dot + color-coded label per phase)
    - Goals (CircleCheck icon, goal_text, confirmed_at date)
    - Alerts (AlertBadge/RoutineBadge, reason text, timestamp)
-   - Safety Decisions (SafetyBadge dynamic by decision type, source, confidence score, "+N more" after 5)
+   - Safety Decisions (SafetyBadge dynamic by decision type, source, confidence %, "+N more" after 5)
    - Scheduled Jobs (job_type in monospace, timestamp, attempts/max_attempts, JobStatusBadge)
+   - Audit Trail (event_type in monospace, timestamp, outcome badge color-coded by result, "+N more" after 10)
 
 ### Architecture
 
@@ -798,5 +800,4 @@ demo-ui/src/
 ### Known limitations
 
 - **Checkpoint clearing on reset is not implemented** — the LangGraph checkpointer is not on `app.state`; clearing it would require refactoring to expose a delete API. Conversation history persists after reset.
-- **Audit events not yet connected** — backend endpoint exists (`GET /v1/demo/audit-events/{id}`), types exist, but no UI section renders them.
 - **No client-side routing** — `StaticFiles(html=True)` serves `index.html` for directories only. If react-router is ever added, replace with a `SpaStaticFiles` subclass (override `lookup_path`).
