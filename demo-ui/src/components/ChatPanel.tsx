@@ -4,7 +4,7 @@ import { useSSE } from "../hooks/useSSE";
 import type { ChatMessage, Phase, SafetyDecision } from "../types";
 import { PhaseBadge } from "./ui/Badge";
 import { ChatMessageBubble } from "./ChatMessage";
-import { PipelineTrace } from "./PipelineTrace";
+import { GraphView } from "./GraphView";
 import { SafetyToast } from "./SafetyToast";
 
 function getSuggestions(phase: Phase): string[] {
@@ -149,7 +149,7 @@ export function ChatPanel({
       </div>
 
       {/* Pipeline trace */}
-      <PipelineTrace nodes={pipelineNodes} isStreaming={isStreaming} />
+      <GraphView nodes={pipelineNodes} isStreaming={isStreaming} />
 
       {/* Messages */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
