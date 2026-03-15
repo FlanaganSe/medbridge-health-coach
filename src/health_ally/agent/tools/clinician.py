@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
@@ -18,10 +18,13 @@ if TYPE_CHECKING:
     from health_ally.agent.state import PendingEffects
 
 
+_VALID_PRIORITIES = ("routine", "urgent")
+
+
 @tool
 def alert_clinician(
     reason: str,
-    priority: str,
+    priority: Literal["routine", "urgent"],
     state: Annotated[dict[str, Any], InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ) -> Command:
@@ -31,6 +34,11 @@ def alert_clinician(
         reason: Description of why the clinician should be alerted.
         priority: Alert priority — "routine" or "urgent".
     """
+    # Runtime coercion: LLMs may pass values outside the Literal set
+    coerced = priority not in _VALID_PRIORITIES
+    if coerced:
+        priority = "routine"  # type: ignore[assignment]
+
     patient_id = state.get("patient_id", "")
     content_hash = hashlib.sha256(reason.encode()).hexdigest()[:16]
     idempotency_key = f"{patient_id}:alert:{content_hash}"
@@ -51,12 +59,13 @@ def alert_clinician(
         "alerts": existing_alerts,
     }
 
+    note = " (coerced from invalid value to 'routine')" if coerced else ""
     return Command(
         update={
             "pending_effects": updated_effects,
             "messages": [
                 ToolMessage(
-                    content=f"Clinician alert created ({priority}): {reason}",
+                    content=f"Clinician alert created ({priority}){note}: {reason}",
                     tool_call_id=tool_call_id,
                 )
             ],

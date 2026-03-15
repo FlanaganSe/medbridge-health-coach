@@ -75,6 +75,7 @@ async def _run_worker() -> None:
         FollowupJobHandler,
         JobDispatcher,
         OnboardingTimeoutHandler,
+        ReminderJobHandler,
     )
     from health_ally.orchestration.reconciliation import startup_recovery
     from health_ally.orchestration.scheduler import SchedulerWorker
@@ -121,9 +122,11 @@ async def _run_worker() -> None:
 
     followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
     timeout_handler = OnboardingTimeoutHandler()
+    reminder_handler = ReminderJobHandler()
     dispatcher = JobDispatcher(
         followup_handler=followup_handler,
         timeout_handler=timeout_handler,
+        reminder_handler=reminder_handler,
     )
 
     # Startup reconciliation

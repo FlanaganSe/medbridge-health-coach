@@ -39,11 +39,29 @@ def set_reminder(
     current_effects: PendingEffects = state.get("pending_effects") or {}
     existing_jobs: list[dict[str, object]] = list(current_effects.get("scheduled_jobs", []))
 
+    try:
+        scheduled_at = datetime.fromisoformat(reminder_time)
+    except ValueError:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=(
+                            f"Invalid reminder time format: '{reminder_time}'. "
+                            "Please provide a valid ISO 8601 datetime string "
+                            "(e.g., '2024-01-15T09:00:00')."
+                        ),
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+            }
+        )
+
     existing_jobs.append(
         {
             "job_type": "reminder",
             "idempotency_key": idempotency_key,
-            "scheduled_at": datetime.fromisoformat(reminder_time),
+            "scheduled_at": scheduled_at,
             "metadata": {"message": reminder_message},
         }
     )

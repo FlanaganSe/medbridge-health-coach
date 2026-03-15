@@ -63,3 +63,37 @@ def test_get_adherence_summary_returns_string() -> None:
     result = get_adherence_summary.invoke({"state": {}})
     assert isinstance(result, str)
     assert "adherence" in result.lower()
+
+
+def test_set_reminder_malformed_time_returns_error() -> None:
+    """set_reminder returns a ToolMessage error for invalid ISO datetime strings."""
+    result = set_reminder.func(
+        reminder_time="not-a-date",
+        reminder_message="Do your exercises",
+        state={"patient_id": "p1"},
+        tool_call_id="tc1",
+    )
+    # Command with a ToolMessage explaining the error
+    assert hasattr(result, "update")
+    messages = result.update["messages"]
+    assert len(messages) == 1
+    assert "Invalid reminder time format" in messages[0].content
+    assert "not-a-date" in messages[0].content
+
+
+def test_alert_clinician_coerces_invalid_priority() -> None:
+    """alert_clinician coerces invalid priority values to 'routine'."""
+    result = alert_clinician.func(
+        reason="Patient needs check-in",
+        priority="high",
+        state={"patient_id": "p1"},
+        tool_call_id="tc1",
+    )
+    assert hasattr(result, "update")
+    # Pending effects should have "routine" not "high"
+    alerts = result.update["pending_effects"]["alerts"]
+    assert len(alerts) == 1
+    assert alerts[0]["priority"] == "routine"
+    # ToolMessage should note the coercion
+    messages = result.update["messages"]
+    assert "coerced" in messages[0].content
