@@ -123,6 +123,11 @@ class _FakeCoachModel:
         """Delegate to wrapped model."""
         return await self._model.ainvoke(*args, **kwargs)  # type: ignore[arg-type]
 
+    async def astream(self, *args: object, **kwargs: object) -> object:  # type: ignore[override]
+        """Delegate to wrapped model for streaming."""
+        async for chunk in self._model.astream(*args, **kwargs):  # type: ignore[arg-type]
+            yield chunk
+
     def invoke(self, *args: object, **kwargs: object) -> object:
         """Delegate to wrapped model."""
         return self._model.invoke(*args, **kwargs)  # type: ignore[arg-type]

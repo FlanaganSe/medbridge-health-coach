@@ -3,12 +3,15 @@
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false
+# pyright: reportAttributeAccessIssue=false
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 import structlog
+from langchain_core.messages import AIMessage
+from langgraph.config import get_stream_writer
 
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.prompts.onboarding import build_onboarding_prompt
@@ -53,9 +56,16 @@ async def onboarding_agent(
     messages = list(state.get("messages", []))
 
     try:
-        response = await model_with_tools.ainvoke(
+        writer = get_stream_writer()
+        full_response = None
+        async for chunk in model_with_tools.astream(
             [{"role": "system", "content": system_prompt}, *messages]
-        )
+        ):
+            text = chunk.content if isinstance(chunk.content, str) else ""
+            if text and not getattr(chunk, "tool_call_chunks", None):
+                writer({"type": "token", "content": text})
+            full_response = chunk if full_response is None else full_response + chunk
+        response = full_response if full_response is not None else AIMessage(content="")
     except Exception:
         logger.exception("onboarding_agent_error", patient_id=patient_id)
         # Return empty to trigger fallback via safety gate

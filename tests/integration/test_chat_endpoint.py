@@ -26,7 +26,9 @@ def app() -> FastAPI:
     mock_graph = AsyncMock()
 
     async def mock_stream(*args, **kwargs):  # type: ignore[no-untyped-def]
-        yield {"save_patient_context": {"outbound_message": "Hello!"}}
+        yield ("custom", {"type": "token", "content": "Hello"})
+        yield ("custom", {"type": "token", "content": "!"})
+        yield ("updates", {"save_patient_context": {"outbound_message": "Hello!"}})
 
     mock_graph.astream = mock_stream
 
@@ -95,16 +97,24 @@ async def test_chat_sse_event_shape(app: FastAPI) -> None:
 
     assert len(events) >= 2  # at least one data event + done
 
-    # All non-done events should be dicts with string keys (node name → state update)
-    data_events = [e for e in events if e.get("type") != "done"]
-    for event in data_events:
+    # Separate token events from node update events
+    token_events = [e for e in events if e.get("type") == "token"]
+    update_events = [e for e in events if e.get("type") not in ("done", "token")]
+
+    # All events should be dicts with string keys
+    for event in events:
         assert isinstance(event, dict)
         assert all(isinstance(k, str) for k in event)
 
-    # At least one event contains outbound_message
+    # Token events have correct shape
+    for te in token_events:
+        assert "content" in te
+        assert isinstance(te["content"], str)
+
+    # At least one update event contains outbound_message
     has_outbound = any(
         "outbound_message" in v
-        for e in data_events
+        for e in update_events
         for v in (e.values() if isinstance(e, dict) else [])
         if isinstance(v, dict)
     )
@@ -112,3 +122,38 @@ async def test_chat_sse_event_shape(app: FastAPI) -> None:
 
     # Last event is the done marker
     assert events[-1] == {"type": "done"}
+
+
+@pytest.mark.asyncio
+async def test_chat_streams_token_events(app: FastAPI) -> None:
+    """Chat endpoint emits token events from custom stream mode."""
+    transport = ASGITransport(app=app)  # type: ignore[arg-type]
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/chat",
+            json={"message": "Hi there"},
+            headers={
+                "X-Patient-ID": "p1",
+                "X-Tenant-ID": "t1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    body = response.text
+    events = []
+    for chunk in body.split("\n\n"):
+        chunk = chunk.strip()
+        if chunk.startswith("data: "):
+            events.append(json.loads(chunk[len("data: ") :]))
+
+    token_events = [e for e in events if e.get("type") == "token"]
+    assert len(token_events) == 2
+    assert token_events[0] == {"type": "token", "content": "Hello"}
+    assert token_events[1] == {"type": "token", "content": "!"}
+
+    # Updates event still present with correct shape
+    update_events = [e for e in events if e.get("type") not in ("done", "token")]
+    assert len(update_events) == 1
+    assert "save_patient_context" in update_events[0]
+    assert update_events[0]["save_patient_context"]["outbound_message"] == "Hello!"

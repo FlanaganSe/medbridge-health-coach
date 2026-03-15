@@ -52,7 +52,7 @@ async def chat(
     async def event_stream() -> AsyncGenerator[str, None]:
         try:
             async with patient_advisory_lock(engine, auth.patient_id):
-                async for event in graph.astream(
+                async for _stream_type, event_data in graph.astream(
                     {
                         "patient_id": auth.patient_id,
                         "tenant_id": auth.tenant_id,
@@ -65,9 +65,9 @@ async def chat(
                             "thread_id": thread_id,
                         }
                     },
-                    stream_mode="updates",
+                    stream_mode=["updates", "custom"],
                 ):
-                    yield _format_sse(event)
+                    yield _format_sse(event_data)
 
             yield _format_sse({"type": "done"})
         except Exception:
