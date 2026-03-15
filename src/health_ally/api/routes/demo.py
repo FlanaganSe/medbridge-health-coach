@@ -245,6 +245,14 @@ async def reset_patient(
         patient.last_outreach_at = None
         patient.last_patient_response_at = None
 
+    # Clear LangGraph checkpoint so next chat starts fresh
+    try:
+        checkpointer = request.app.state.graph.checkpointer
+        if checkpointer is not None and checkpointer is not False:
+            await checkpointer.adelete_thread(f"patient-{pid}")  # type: ignore[union-attr]
+    except Exception:
+        logger.exception("Failed to clear checkpoint for patient %s", pid)
+
     return ResetPatientResponse(
         patient_id=str(pid),
         phase="pending",

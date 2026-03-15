@@ -14,8 +14,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from health_ally.agent.graph import compile_graph
 from health_ally.main import create_app
-from health_ally.persistence.db import create_session_factory
+from health_ally.persistence.db import create_checkpointer, create_session_factory
 from health_ally.persistence.models import Base
 from health_ally.settings import Settings
 
@@ -84,6 +85,7 @@ async def app(settings: Settings, engine: AsyncEngine) -> FastAPI:
     application.state.engine = engine
     application.state.session_factory = create_session_factory(engine)
     application.state.langgraph_pool = None
+    application.state.graph = compile_graph(checkpointer=create_checkpointer())  # type: ignore[arg-type]
     return application
 
 
