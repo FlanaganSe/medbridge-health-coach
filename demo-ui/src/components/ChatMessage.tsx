@@ -1,4 +1,5 @@
 import { AlertCircle, Bot, Wrench } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import type { ChatMessage as ChatMessageType } from "../types";
 
 function formatTime(date: Date): string {
@@ -14,9 +15,9 @@ function BotMessage({ content, timestamp }: ChatMessageType) {
       </div>
       <div className="max-w-[520px]">
         <div className="rounded-bl-xl rounded-br-xl rounded-tr-xl bg-bg-subtle px-4 py-3">
-          <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
-            {content}
-          </p>
+          <div className="prose text-sm leading-relaxed text-text-primary">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
         </div>
         <span className="mt-1 block text-[11px] text-text-muted">
           {formatTime(timestamp)}
