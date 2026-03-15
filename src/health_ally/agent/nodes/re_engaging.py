@@ -15,6 +15,7 @@ import structlog
 from langchain_core.messages import AIMessage
 from langgraph.config import get_stream_writer
 
+from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.effects import accumulate_effects
 from health_ally.agent.prompts.re_engaging import build_re_engaging_prompt
@@ -96,7 +97,7 @@ async def _generate_re_engaging_message(
         async for chunk in model_with_tools.astream(
             [{"role": "system", "content": system_prompt}, *messages]
         ):
-            text = chunk.content if isinstance(chunk.content, str) else ""
+            text = extract_text_content(chunk.content) if chunk.content else ""
             if text and not getattr(chunk, "tool_call_chunks", None):
                 writer({"type": "token", "content": text})
             full_response = chunk if full_response is None else full_response + chunk
@@ -108,7 +109,7 @@ async def _generate_re_engaging_message(
     # Tool calls → graph loops through tool_node; defer outbound_message
     # to the final (no-tools) invocation so raw tool JSON isn't streamed.
     has_tool_calls = bool(getattr(response, "tool_calls", None))
-    content = None if has_tool_calls else (str(response.content) if response.content else None)
+    content = None if has_tool_calls else (extract_text_content(response.content) or None)
 
     return {
         "messages": [response],

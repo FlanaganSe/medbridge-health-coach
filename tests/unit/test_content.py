@@ -58,6 +58,14 @@ class TestListContent:
         content: list[str | dict[str, object]] = ["Hello ", "world!"]
         assert extract_text_content(content) == "Hello world!"
 
+    def test_none_text_value_skipped(self) -> None:
+        """A text block with None text is safely skipped."""
+        content: list[str | dict[str, object]] = [
+            {"type": "text", "text": None},
+            {"type": "text", "text": "Visible", "index": 0},
+        ]
+        assert extract_text_content(content) == "Visible"
+
     def test_thinking_blocks_ignored(self) -> None:
         content: list[str | dict[str, object]] = [
             {"type": "thinking", "text": "internal reasoning"},

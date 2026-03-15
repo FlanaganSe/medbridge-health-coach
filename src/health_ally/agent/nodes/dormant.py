@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.effects import accumulate_effects
 from health_ally.agent.prompts.system import get_system_prompt
@@ -43,7 +44,7 @@ async def dormant_node(
             response = await coach_model.ainvoke(
                 [{"role": "system", "content": system_prompt}, *messages]
             )
-            content = str(response.content) if response.content else None  # type: ignore[union-attr]
+            content = extract_text_content(response.content) or None  # type: ignore[union-attr]
         except Exception:
             logger.exception("dormant_welcome_back_error", patient_id=patient_id)
             # On LLM failure, do NOT transition phase — leave patient in DORMANT

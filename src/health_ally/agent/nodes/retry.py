@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import structlog
 from langchain_core.messages import AIMessage
 
+from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.prompts.system import get_system_prompt
 from health_ally.agent.state import PatientState  # noqa: TC001
@@ -62,7 +63,7 @@ async def retry_generation(
         response = await coach_model.ainvoke(
             [{"role": "system", "content": augmented_prompt}, *messages]
         )
-        content = str(response.content)
+        content = extract_text_content(response.content)
     except Exception:
         logger.exception("retry_generation_error", patient_id=patient_id)
         # On failure, let fallback handle it
