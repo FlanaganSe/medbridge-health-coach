@@ -245,6 +245,52 @@ export function ObservabilityPanel({
         ))}
       </Section>
 
+      {/* Conversation */}
+      <Section>
+        <SectionHeader
+          title="Conversation"
+          count={state.conversationHistory.length}
+        />
+        {state.conversationHistory.length === 0 && (
+          <EmptyState text="No conversation history" />
+        )}
+        {state.conversationHistory.slice(0, 20).map((m) =>
+          m.role === "tool" ? (
+            <div
+              key={m.message_id}
+              className="ml-6 flex items-start gap-2 border-l-2 border-amber-badge-text/30 pl-2"
+            >
+              <span className="mt-0.5 shrink-0 font-mono text-[10px] font-medium text-amber-badge-text">
+                {m.tool_name}
+              </span>
+              <div className="min-w-0 flex-1 text-[11px] text-text-muted">
+                {m.content}
+              </div>
+            </div>
+          ) : (
+            <div key={m.message_id} className="flex items-start gap-2">
+              <span
+                className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                  m.role === "ai"
+                    ? "bg-blue-badge-bg text-blue-badge-text"
+                    : "bg-bg-subtle text-text-secondary"
+                }`}
+              >
+                {m.role === "ai" ? "Coach" : "User"}
+              </span>
+              <div className="min-w-0 flex-1 text-xs leading-relaxed text-text-primary">
+                {m.content}
+              </div>
+            </div>
+          ),
+        )}
+        {state.conversationHistory.length > 20 && (
+          <div className="text-xs font-medium text-text-secondary">
+            +{state.conversationHistory.length - 20} more messages
+          </div>
+        )}
+      </Section>
+
       {/* Audit Trail */}
       <Section border={false}>
         <SectionHeader

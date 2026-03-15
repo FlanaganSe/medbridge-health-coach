@@ -55,6 +55,13 @@ export interface AuditEventItem {
   created_at: string;
 }
 
+export interface ConversationMessage {
+  role: "human" | "ai" | "tool";
+  content: string;
+  tool_name?: string;
+  message_id: string;
+}
+
 // --- API Response Wrappers ---
 
 export interface SeedPatientResponse {
@@ -111,4 +118,5 @@ export interface PatientState {
   safetyDecisions: SafetyDecisionItem[];
   scheduledJobs: ScheduledJobItem[];
   auditEvents: AuditEventItem[];
+  conversationHistory: ConversationMessage[];
 }

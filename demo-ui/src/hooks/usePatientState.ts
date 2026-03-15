@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchAlerts,
   fetchAuditEvents,
+  fetchConversationHistory,
   fetchGoals,
   fetchPhase,
   fetchSafetyDecisions,
@@ -18,6 +19,7 @@ const EMPTY_STATE: PatientState = {
   safetyDecisions: [],
   scheduledJobs: [],
   auditEvents: [],
+  conversationHistory: [],
 };
 
 type LoadState = "loading" | "loaded" | "error";
@@ -43,7 +45,7 @@ export function usePatientState(
     // Capture the current token so we can detect if the patient changed mid-fetch
     const token = tokenRef.current;
     try {
-      const [phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents] =
+      const [phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents, conversationHistory] =
         await Promise.all([
           fetchPhase(patientId, tenantId).catch(() => "pending" as const),
           fetchGoals(patientId, tenantId).catch(() => []),
@@ -51,11 +53,12 @@ export function usePatientState(
           fetchSafetyDecisions(patientId, tenantId).catch(() => []),
           fetchScheduledJobs(patientId).catch(() => []),
           fetchAuditEvents(patientId).catch(() => []),
+          fetchConversationHistory(patientId).catch(() => []),
         ]);
 
       if (tokenRef.current !== token) return;
 
-      setState({ phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents });
+      setState({ phase, goals, alerts, safetyDecisions, scheduledJobs, auditEvents, conversationHistory });
       setLoadState("loaded");
       setLastUpdated(new Date());
     } catch {

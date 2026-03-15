@@ -1,6 +1,7 @@
 import type {
   AlertItem,
   AuditEventItem,
+  ConversationMessage,
   GoalItem,
   Phase,
   ResetPatientResponse,
@@ -84,6 +85,15 @@ export async function fetchAuditEvents(
     `/v1/demo/audit-events/${patientId}`,
   );
   return r.events;
+}
+
+export async function fetchConversationHistory(
+  patientId: string,
+): Promise<ConversationMessage[]> {
+  const r = await request<{ messages: ConversationMessage[] }>(
+    `/v1/demo/conversation/${patientId}`,
+  );
+  return r.messages;
 }
 
 // --- State Endpoints ---
