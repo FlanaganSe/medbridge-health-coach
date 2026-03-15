@@ -65,7 +65,7 @@ export function GraphView({ nodes, isStreaming }: GraphViewProps) {
 
   const done = !isStreaming;
 
-  // Collapsed summary bar (identical to PipelineTrace)
+  // Collapsed summary bar
   if (done && !expanded) {
     return (
       <button

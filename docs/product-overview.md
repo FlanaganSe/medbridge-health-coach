@@ -789,8 +789,9 @@ demo-ui/src/
     DemoControlBar.tsx           # Demo action buttons + status bar
     ChatPanel.tsx                # Chat header + messages + input + safety toast
     ChatMessage.tsx              # Bot/user/tool message variants
-    PipelineTrace.tsx            # Real-time graph node visualization
-    ObservabilityPanel.tsx       # Sidebar: phase, goals, alerts, safety, jobs
+    GraphView.tsx                # SVG DAG rendering 14-node architecture with live status highlighting
+    graphLayout.ts               # Static node coordinates, edge paths, cluster groupings for the SVG
+    ObservabilityPanel.tsx       # Sidebar: phase, goals, alerts, safety, jobs, conversation history
     SafetyToast.tsx              # Slide-in safety classification notification
     ui/Badge.tsx                 # PhaseBadge, AlertBadge, SafetyBadge, etc.
     ui/Button.tsx                # Primary/secondary button with icon support
@@ -799,5 +800,4 @@ demo-ui/src/
 
 ### Known limitations
 
-- **Checkpoint clearing on reset is not implemented** — the LangGraph checkpointer is not on `app.state`; clearing it would require refactoring to expose a delete API. Conversation history persists after reset.
 - **No client-side routing** — `StaticFiles(html=True)` serves `index.html` for directories only. If react-router is ever added, replace with a `SpaStaticFiles` subclass (override `lookup_path`).
