@@ -92,12 +92,27 @@ def get_program_summary(
     Returns a text summary of the patient's current exercises, frequency,
     and any special instructions from their care team.
     """
-    # M3 stub — returns realistic mock data
-    return (
+    # Stub profiles — deterministic per patient for demo variety
+    profiles = [
         "Current exercise program:\n"
         "1. Straight leg raises — 3 sets of 10, daily\n"
-        "2. Quad sets — 3 sets of 10, daily\n"
-        "3. Heel slides — 2 sets of 15, every other day\n"
-        "Prescribed by: Dr. Smith\n"
-        "Program start: 2 weeks ago"
-    )
+        "2. Heel slides — 2 sets of 15, every other day\n"
+        "3. Quad sets — 3 sets of 10, daily\n"
+        "Prescribed by: Dr. Chen\n"
+        "Program start: 2 weeks ago",
+        "Current exercise program:\n"
+        "1. Wall squats — 3 sets of 10, daily\n"
+        "2. Calf raises — 3 sets of 12, daily\n"
+        "3. Hamstring curls — 2 sets of 10, every other day\n"
+        "Prescribed by: Dr. Patel\n"
+        "Program start: 3 weeks ago",
+        "Current exercise program:\n"
+        "1. Shoulder flexion — 3 sets of 10, daily\n"
+        "2. External rotation — 2 sets of 15, daily\n"
+        "3. Pendulum swings — 3 sets of 10, every other day\n"
+        "Prescribed by: Dr. Kim\n"
+        "Program start: 1 week ago",
+    ]
+    patient_id = state.get("patient_id", "")
+    index = hash(patient_id) % len(profiles)
+    return profiles[index]

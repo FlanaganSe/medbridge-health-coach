@@ -18,12 +18,33 @@ def get_adherence_summary(
 
     Returns completion rates, streaks, and recent activity.
     """
-    # M3 stub — returns realistic mock data
-    return (
+    # Stub profiles — deterministic per patient for demo variety
+    profiles = [
         "Exercise adherence summary:\n"
-        "- Overall completion: 75% (15/20 sessions)\n"
-        "- Current streak: 3 days\n"
-        "- Best streak: 5 days\n"
-        "- Most consistent: Straight leg raises (90%)\n"
-        "- Needs attention: Heel slides (50%)"
-    )
+        "Overall completion: 90% (18/20 sessions)\n"
+        "Current streak: 7 days\n"
+        "Best streak: 12 days\n\n"
+        "Exercise breakdown:\n"
+        "- Straight leg raises: 95% (19/20)\n"
+        "- Heel slides: 85% (17/20)\n"
+        "- Quad sets: 90% (18/20)",
+        "Exercise adherence summary:\n"
+        "Overall completion: 62% (13/21 sessions)\n"
+        "Current streak: 1 day\n"
+        "Best streak: 5 days\n\n"
+        "Exercise breakdown:\n"
+        "- Wall squats: 71% (15/21)\n"
+        "- Calf raises: 57% (12/21)\n"
+        "- Hamstring curls: 57% (12/21)",
+        "Exercise adherence summary:\n"
+        "Overall completion: 40% (8/20 sessions)\n"
+        "Current streak: 0 days\n"
+        "Best streak: 3 days\n\n"
+        "Exercise breakdown:\n"
+        "- Shoulder flexion: 45% (9/20)\n"
+        "- External rotation: 35% (7/20)\n"
+        "- Pendulum swings: 40% (8/20)",
+    ]
+    patient_id = state.get("patient_id", "")
+    index = hash(patient_id) % len(profiles)
+    return profiles[index]

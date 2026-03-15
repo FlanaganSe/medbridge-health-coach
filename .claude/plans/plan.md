@@ -37,8 +37,13 @@
   - [x] Step 3 — Add summary-before-confirmation instruction to `_GOAL_INSTRUCTIONS` in `onboarding.py` → verify: `grep -q 'summarize' src/health_ally/agent/prompts/onboarding.py`
   - [x] Step 4 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
   Commit: f15b8dd "feat: improve system prompts with MI-aligned OARS techniques"
-- [ ] M7: Dormant Welcome-Back Prompt
-  - [ ] Step 1 — Add `DORMANT_PROMPT` to `system.py` and register in `PHASE_PROMPTS` → verify: `grep -q 'DORMANT_PROMPT' src/health_ally/agent/prompts/system.py`
-  - [ ] Step 2 — Update `dormant.py` to use `get_system_prompt("dormant")` instead of `build_re_engaging_prompt("patient")` → verify: `grep -q 'get_system_prompt' src/health_ally/agent/nodes/dormant.py`
+- [x] M7: Dormant Welcome-Back Prompt
+  - [x] Step 1 — Add `DORMANT_PROMPT` to `system.py` and register in `PHASE_PROMPTS` → verify: `grep -q 'DORMANT_PROMPT' src/health_ally/agent/prompts/system.py`
+  - [x] Step 2 — Update `dormant.py` to use `get_system_prompt("dormant")` instead of `build_re_engaging_prompt("patient")` → verify: `grep -q 'get_system_prompt' src/health_ally/agent/nodes/dormant.py`
+  - [x] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
+  Commit: 4e1ebbe "feat: add dedicated dormant welcome-back prompt"
+- [ ] M8: Per-Patient Stub Data
+  - [ ] Step 1 — Add 3 adherence profiles to `adherence.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/adherence.py`
+  - [ ] Step 2 — Add 3 program profiles to `goal.py`, select by `hash(patient_id)` → verify: `ruff check src/health_ally/agent/tools/goal.py`
   - [ ] Step 3 — Run lint, typecheck, and tests → verify: `ruff check . && ruff format --check . && pyright . && pytest`
-  Commit: "feat: add dedicated dormant welcome-back prompt"
+  Commit: "feat: per-patient stub data for demo differentiation"
