@@ -57,6 +57,7 @@ class Patient(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[str] = mapped_column(String(50), index=True)
     external_patient_id: Mapped[str] = mapped_column(String(100))
+    display_name: Mapped[str | None] = mapped_column(String(200))
     phase: Mapped[str] = mapped_column(String(20), default="pending")
     timezone: Mapped[str] = mapped_column(String(50), default="America/New_York")
     unanswered_count: Mapped[int] = mapped_column(Integer, default=0)

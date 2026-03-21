@@ -1,70 +1,113 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import * as api from "./api";
 import { usePatientState } from "./hooks/usePatientState";
 import { ChatPanel } from "./components/ChatPanel";
 import { ObservabilityPanel } from "./components/ObservabilityPanel";
 import { TopBar } from "./components/TopBar";
-
-const DEMO_PATIENTS = [
-  { id: "00000000-0000-0000-0000-000000000001", name: "Sarah M. — Knee Rehab" },
-  { id: "00000000-0000-0000-0000-000000000002", name: "James T. — Shoulder Recovery" },
-];
+import type { DemoPatient } from "./types";
 
 const TENANT_ID = "demo-tenant";
 
 export function App() {
-  const [externalPatientId, setExternalPatientId] = useState(
-    DEMO_PATIENTS[0].id,
+  const [patients, setPatients] = useState<DemoPatient[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    null,
   );
-  const [internalId, setInternalId] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
-  const effectivePatientId = internalId ?? externalPatientId;
+  const refreshPatients = useCallback(async () => {
+    const list = await api.listPatients(TENANT_ID);
+    setPatients(list);
+    return list;
+  }, []);
+
+  // Fetch patients on mount
+  useEffect(() => {
+    refreshPatients();
+  }, [refreshPatients]);
+
+  // Auto-select first patient when list loads and nothing is selected
+  useEffect(() => {
+    if (!selectedPatientId && patients.length > 0) {
+      setSelectedPatientId(patients[0].patient_id);
+    }
+    // If selected patient was deleted, select first remaining
+    if (
+      selectedPatientId &&
+      patients.length > 0 &&
+      !patients.some((p) => p.patient_id === selectedPatientId)
+    ) {
+      setSelectedPatientId(patients[0].patient_id);
+    }
+  }, [patients, selectedPatientId]);
 
   const { state, loadState, lastUpdated, refresh } = usePatientState(
-    effectivePatientId,
+    selectedPatientId ?? "",
     TENANT_ID,
   );
 
   const handlePatientChange = useCallback((id: string) => {
-    setExternalPatientId(id);
-    setInternalId(null);
+    setSelectedPatientId(id);
   }, []);
 
-  const handlePatientSeeded = useCallback((id: string) => {
-    setInternalId(id);
-  }, []);
+  const handlePatientSeeded = useCallback(
+    async (patientId: string) => {
+      const list = await refreshPatients();
+      // Select the newly seeded patient
+      if (list.some((p) => p.patient_id === patientId)) {
+        setSelectedPatientId(patientId);
+      }
+    },
+    [refreshPatients],
+  );
+
+  const handlePatientDeleted = useCallback(async () => {
+    await refreshPatients();
+  }, [refreshPatients]);
 
   const handleReset = useCallback(() => {
     setResetKey((k) => k + 1);
-  }, []);
+    refreshPatients();
+  }, [refreshPatients]);
 
   return (
     <div className="flex h-screen flex-col bg-bg-page">
       <TopBar
-        patients={DEMO_PATIENTS}
-        selectedPatientId={externalPatientId}
+        patients={patients}
+        selectedPatientId={selectedPatientId ?? ""}
         onPatientChange={handlePatientChange}
-        patientId={effectivePatientId}
-        externalPatientId={externalPatientId}
+        patientId={selectedPatientId ?? ""}
         tenantId={TENANT_ID}
+        phase={state.phase}
         onPatientSeeded={handlePatientSeeded}
+        onPatientDeleted={handlePatientDeleted}
         onStateChanged={refresh}
         onReset={handleReset}
       />
       <div className="flex min-h-0 flex-1">
-        <ChatPanel
-          key={resetKey}
-          patientId={effectivePatientId}
-          tenantId={TENANT_ID}
-          phase={state.phase}
-          onStreamComplete={refresh}
-        />
-        <ObservabilityPanel
-          state={state}
-          loadState={loadState}
-          lastUpdated={lastUpdated}
-          onRetry={refresh}
-        />
+        {selectedPatientId ? (
+          <>
+            <ChatPanel
+              key={resetKey}
+              patientId={selectedPatientId}
+              tenantId={TENANT_ID}
+              phase={state.phase}
+              onStreamComplete={refresh}
+            />
+            <ObservabilityPanel
+              state={state}
+              loadState={loadState}
+              lastUpdated={lastUpdated}
+              onRetry={refresh}
+            />
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-text-secondary">
+            {patients.length === 0
+              ? "No patients yet — click New Patient to get started"
+              : "Select a patient to begin"}
+          </div>
+        )}
       </div>
     </div>
   );

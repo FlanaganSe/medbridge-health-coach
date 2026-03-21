@@ -16,6 +16,7 @@ from langchain_core.messages import BaseMessage  # noqa: TC002
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
+from health_ally.persistence.locking import patient_advisory_lock
 from health_ally.persistence.models import (
     AuditEvent,
     OutboxEntry,
@@ -35,12 +36,14 @@ router = APIRouter(prefix="/v1/demo", tags=["demo"])
 class SeedPatientRequest(BaseModel):
     tenant_id: str = "demo-tenant"
     external_patient_id: str | None = None
+    display_name: str | None = None
     timezone: str = "America/New_York"
 
 
 class SeedPatientResponse(BaseModel):
     patient_id: str
     external_patient_id: str
+    display_name: str | None
     phase: str
 
 
@@ -48,6 +51,29 @@ class TriggerFollowupResponse(BaseModel):
     job_id: str
     job_type: str
     original_scheduled_at: str
+    status: str
+
+
+class DemoPatientItem(BaseModel):
+    patient_id: str
+    external_patient_id: str
+    display_name: str | None
+    phase: str
+    created_at: str
+
+
+class DemoPatientListResponse(BaseModel):
+    patients: list[DemoPatientItem]
+
+
+class DeletePatientResponse(BaseModel):
+    patient_id: str
+    deleted: bool
+
+
+class RunCheckinResponse(BaseModel):
+    patient_id: str
+    phase: str
     status: str
 
 
@@ -163,9 +189,14 @@ async def seed_patient(
         patient = existing.scalars().first()
 
         if patient is not None:
+            # Update display_name if provided and currently unset
+            if body.display_name and not patient.display_name:
+                patient.display_name = body.display_name
+                await session.flush()
             return SeedPatientResponse(
                 patient_id=str(patient.id),
                 external_patient_id=patient.external_patient_id,
+                display_name=patient.display_name,
                 phase=patient.phase,
             )
 
@@ -173,6 +204,7 @@ async def seed_patient(
         patient = Patient(
             tenant_id=body.tenant_id,
             external_patient_id=ext_id,
+            display_name=body.display_name,
             phase="pending",
             timezone=body.timezone,
         )
@@ -203,8 +235,94 @@ async def seed_patient(
     return SeedPatientResponse(
         patient_id=str(patient.id),
         external_patient_id=ext_id,
+        display_name=body.display_name,
         phase="pending",
     )
+
+
+@router.get("/patients", response_model=DemoPatientListResponse)
+async def list_patients(
+    request: Request,
+    tenant_id: str = "demo-tenant",
+) -> DemoPatientListResponse:
+    """List all patients for a tenant, newest first (limit 50)."""
+    session_factory = request.app.state.session_factory
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(Patient)
+            .where(Patient.tenant_id == tenant_id)
+            .order_by(Patient.created_at.desc())
+            .limit(50)
+        )
+        patients = result.scalars().all()
+
+    return DemoPatientListResponse(
+        patients=[
+            DemoPatientItem(
+                patient_id=str(p.id),
+                external_patient_id=p.external_patient_id,
+                display_name=p.display_name,
+                phase=p.phase,
+                created_at=p.created_at.isoformat(),
+            )
+            for p in patients
+        ]
+    )
+
+
+@router.delete(
+    "/patients/{patient_id}",
+    response_model=DeletePatientResponse,
+)
+async def delete_patient(
+    request: Request,
+    patient_id: str,
+) -> DeletePatientResponse:
+    """Delete a patient and all associated data.
+
+    Hard-deletes the patient record plus goals, jobs, outbox, and consent
+    snapshots. Audit events, alerts, and safety decisions are preserved
+    (no FK to patients).
+    """
+    session_factory = request.app.state.session_factory
+
+    try:
+        pid = uuid.UUID(patient_id)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
+
+    async with session_factory() as session, session.begin():
+        patient = await session.get(Patient, pid)
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        # Delete FK-dependent records first
+        await session.execute(
+            delete(PatientGoal).where(PatientGoal.patient_id == pid)
+        )
+        await session.execute(
+            delete(ScheduledJob).where(ScheduledJob.patient_id == pid)
+        )
+        await session.execute(
+            delete(OutboxEntry).where(OutboxEntry.patient_id == pid)
+        )
+        await session.execute(
+            delete(PatientConsentSnapshot).where(PatientConsentSnapshot.patient_id == pid)
+        )
+
+        # Delete the patient record via SQL (avoids WriteOnlyMapped lazy load)
+        await session.execute(delete(Patient).where(Patient.id == pid))
+
+    # Clear LangGraph checkpoint
+    try:
+        checkpointer = request.app.state.graph.checkpointer
+        if checkpointer is not None and checkpointer is not False:
+            await checkpointer.adelete_thread(f"patient-{pid}")  # type: ignore[union-attr]
+    except Exception:
+        logger.exception("Failed to clear checkpoint for patient %s", pid)
+
+    return DeletePatientResponse(patient_id=str(pid), deleted=True)
 
 
 @router.post(
@@ -437,3 +555,73 @@ async def get_conversation_history(
             items.append(item)
 
     return ConversationHistoryResponse(messages=items[:100])
+
+
+@router.post(
+    "/run-checkin/{patient_id}",
+    response_model=RunCheckinResponse,
+)
+async def run_checkin(
+    request: Request,
+    patient_id: str,
+) -> RunCheckinResponse:
+    """Directly invoke the coaching graph for a follow-up check-in.
+
+    Bypasses the scheduler entirely — acquires the advisory lock and runs
+    the graph with invocation_source="scheduler" and empty messages, just
+    like FollowupJobHandler.handle(). Only works for ACTIVE or RE_ENGAGING
+    patients.
+    """
+    session_factory = request.app.state.session_factory
+
+    try:
+        pid = uuid.UUID(patient_id)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
+
+    # Read current phase
+    async with session_factory() as session:
+        patient = await session.get(Patient, pid)
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+        phase = patient.phase
+        tenant_id = patient.tenant_id
+
+    if phase not in ("active", "re_engaging"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Check-in requires ACTIVE or RE_ENGAGING phase (current: {phase})",
+        )
+
+    graph = request.app.state.graph
+    engine = request.app.state.engine
+    ctx = request.app.state.ctx_factory(session_factory, engine)
+    thread_id = f"patient-{pid}"
+
+    async with patient_advisory_lock(engine, str(pid)):
+        await graph.ainvoke(  # type: ignore[reportUnknownMemberType]
+            {
+                "patient_id": str(pid),
+                "tenant_id": tenant_id,
+                "messages": [],
+                "invocation_source": "scheduler",
+                "_job_metadata": {"follow_up_day": 2},
+            },
+            config={
+                "configurable": {
+                    "ctx": ctx,
+                    "thread_id": thread_id,
+                }
+            },
+        )
+
+    # Re-read phase after graph execution (may have changed)
+    async with session_factory() as session:
+        patient = await session.get(Patient, pid)
+        new_phase = patient.phase if patient else phase
+
+    return RunCheckinResponse(
+        patient_id=str(pid),
+        phase=new_phase,
+        status="completed",
+    )

@@ -2,13 +2,15 @@ import type {
   AlertItem,
   AuditEventItem,
   ConversationMessage,
+  DeletePatientResponse,
+  DemoPatient,
   GoalItem,
   Phase,
   ResetPatientResponse,
+  RunCheckinResponse,
   SafetyDecisionItem,
   ScheduledJobItem,
   SeedPatientResponse,
-  TriggerFollowupResponse,
 } from "./types";
 
 class ApiError extends Error {
@@ -42,6 +44,7 @@ function authHeaders(patientId: string, tenantId: string): HeadersInit {
 export function seedPatient(
   tenantId: string,
   externalPatientId: string,
+  displayName?: string,
 ): Promise<SeedPatientResponse> {
   return request("/v1/demo/seed-patient", {
     method: "POST",
@@ -49,14 +52,32 @@ export function seedPatient(
     body: JSON.stringify({
       tenant_id: tenantId,
       external_patient_id: externalPatientId,
+      display_name: displayName ?? null,
     }),
   });
 }
 
-export function triggerFollowup(
+export async function listPatients(
+  tenantId: string,
+): Promise<DemoPatient[]> {
+  const r = await request<{ patients: DemoPatient[] }>(
+    `/v1/demo/patients?tenant_id=${encodeURIComponent(tenantId)}`,
+  );
+  return r.patients;
+}
+
+export function deletePatient(
   patientId: string,
-): Promise<TriggerFollowupResponse> {
-  return request(`/v1/demo/trigger-followup/${patientId}`, {
+): Promise<DeletePatientResponse> {
+  return request(`/v1/demo/patients/${patientId}`, {
+    method: "DELETE",
+  });
+}
+
+export function runCheckin(
+  patientId: string,
+): Promise<RunCheckinResponse> {
+  return request(`/v1/demo/run-checkin/${patientId}`, {
     method: "POST",
   });
 }

@@ -1,4 +1,4 @@
-"""Tests for demo API endpoints — seed, reset, trigger followup."""
+"""Tests for demo API endpoints — seed, reset, trigger followup, list, delete, run-checkin."""
 
 from __future__ import annotations
 
@@ -8,6 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from httpx import ASGITransport, AsyncClient
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from sqlalchemy import update
+
+from health_ally.persistence.models import Patient
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -292,3 +295,227 @@ async def test_trigger_followup_with_no_jobs_returns_404(app: FastAPI) -> None:
         )
 
     assert trigger_resp.status_code == 404
+
+
+# --- Seed with display_name ---
+
+
+async def test_seed_patient_with_display_name(app: FastAPI) -> None:
+    """Seed patient with display_name stores and returns it."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/v1/demo/seed-patient",
+            json={
+                "tenant_id": "demo-tenant",
+                "external_patient_id": str(uuid.uuid4()),
+                "display_name": "Alice W. — Hip Recovery",
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["display_name"] == "Alice W. — Hip Recovery"
+
+
+async def test_seed_patient_without_display_name(app: FastAPI) -> None:
+    """Seed patient without display_name returns null."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant", "external_patient_id": str(uuid.uuid4())},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] is None
+
+
+# --- List patients ---
+
+
+async def test_list_patients_returns_seeded(app: FastAPI) -> None:
+    """GET /v1/demo/patients returns patients seeded in this tenant."""
+    ext_id = str(uuid.uuid4())
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        await client.post(
+            "/v1/demo/seed-patient",
+            json={
+                "tenant_id": "demo-tenant",
+                "external_patient_id": ext_id,
+                "display_name": "Test Patient",
+            },
+        )
+
+        resp = await client.get("/v1/demo/patients?tenant_id=demo-tenant")
+
+    assert resp.status_code == 200
+    patients = resp.json()["patients"]
+    assert len(patients) >= 1
+    ext_ids = [p["external_patient_id"] for p in patients]
+    assert ext_id in ext_ids
+
+
+async def test_list_patients_empty_tenant(app: FastAPI) -> None:
+    """GET /v1/demo/patients for unknown tenant returns empty list."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        resp = await client.get("/v1/demo/patients?tenant_id=nonexistent-tenant")
+
+    assert resp.status_code == 200
+    assert resp.json()["patients"] == []
+
+
+# --- Delete patient ---
+
+
+async def test_delete_patient_removes_record(app: FastAPI) -> None:
+    """DELETE /v1/demo/patients/{id} removes the patient."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        seed_resp = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant", "external_patient_id": str(uuid.uuid4())},
+        )
+        patient_id = seed_resp.json()["patient_id"]
+
+        del_resp = await client.delete(f"/v1/demo/patients/{patient_id}")
+
+    assert del_resp.status_code == 200
+    assert del_resp.json()["deleted"] is True
+
+    # Verify patient no longer exists via list
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        list_resp = await client.get("/v1/demo/patients?tenant_id=demo-tenant")
+
+    patient_ids = [p["patient_id"] for p in list_resp.json()["patients"]]
+    assert patient_id not in patient_ids
+
+
+async def test_delete_nonexistent_patient_returns_404(app: FastAPI) -> None:
+    """DELETE /v1/demo/patients/{id} for unknown patient returns 404."""
+    fake_id = str(uuid.uuid4())
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        resp = await client.delete(f"/v1/demo/patients/{fake_id}")
+
+    assert resp.status_code == 404
+
+
+# --- Run check-in ---
+
+
+async def test_run_checkin_rejects_pending_phase(app: FastAPI) -> None:
+    """POST /v1/demo/run-checkin rejects patient in PENDING phase."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        seed_resp = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant", "external_patient_id": str(uuid.uuid4())},
+        )
+        patient_id = seed_resp.json()["patient_id"]
+
+        resp = await client.post(f"/v1/demo/run-checkin/{patient_id}")
+
+    assert resp.status_code == 409
+    assert "ACTIVE or RE_ENGAGING" in resp.json()["detail"]
+
+
+async def test_run_checkin_rejects_onboarding_phase(app: FastAPI) -> None:
+    """POST /v1/demo/run-checkin rejects patient in ONBOARDING phase."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        seed_resp = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant", "external_patient_id": str(uuid.uuid4())},
+        )
+        patient_id = seed_resp.json()["patient_id"]
+
+    # Manually set phase to onboarding
+    async with app.state.session_factory() as session, session.begin():
+        await session.execute(
+            update(Patient)
+            .where(Patient.id == uuid.UUID(patient_id))
+            .values(phase="onboarding")
+        )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        resp = await client.post(f"/v1/demo/run-checkin/{patient_id}")
+
+    assert resp.status_code == 409
+
+
+async def test_run_checkin_succeeds_for_active_patient(app: FastAPI) -> None:
+    """POST /v1/demo/run-checkin invokes graph for ACTIVE patient."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        seed_resp = await client.post(
+            "/v1/demo/seed-patient",
+            json={"tenant_id": "demo-tenant", "external_patient_id": str(uuid.uuid4())},
+        )
+        patient_id = seed_resp.json()["patient_id"]
+
+    # Set phase to active
+    async with app.state.session_factory() as session, session.begin():
+        await session.execute(
+            update(Patient)
+            .where(Patient.id == uuid.UUID(patient_id))
+            .values(phase="active")
+        )
+
+    # Mock ctx_factory and graph.ainvoke
+    mock_ctx = MagicMock()
+    app.state.ctx_factory = MagicMock(return_value=mock_ctx)
+    original_ainvoke = app.state.graph.ainvoke
+    app.state.graph.ainvoke = AsyncMock(return_value=None)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            resp = await client.post(f"/v1/demo/run-checkin/{patient_id}")
+    finally:
+        app.state.graph.ainvoke = original_ainvoke
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["patient_id"] == patient_id
+    assert data["status"] == "completed"
+
+
+async def test_run_checkin_nonexistent_patient_returns_404(app: FastAPI) -> None:
+    """POST /v1/demo/run-checkin for unknown patient returns 404."""
+    fake_id = str(uuid.uuid4())
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        resp = await client.post(f"/v1/demo/run-checkin/{fake_id}")
+
+    assert resp.status_code == 404

@@ -1,13 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import { clsx } from "clsx";
 
-interface ButtonProps {
+export interface ButtonProps {
   label: string;
   icon?: LucideIcon;
   variant?: "primary" | "secondary";
   danger?: boolean;
   loading?: boolean;
   disabled?: boolean;
+  title?: string;
   onClick: () => void;
 }
 
@@ -18,6 +19,7 @@ export function Button({
   danger = false,
   loading = false,
   disabled = false,
+  title,
   onClick,
 }: ButtonProps) {
   const isDisabled = loading || disabled;
@@ -27,6 +29,7 @@ export function Button({
       type="button"
       onClick={onClick}
       disabled={isDisabled}
+      title={title}
       className={clsx(
         "inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] px-4 text-[13px] font-medium transition-opacity",
         isDisabled && "cursor-not-allowed opacity-50",

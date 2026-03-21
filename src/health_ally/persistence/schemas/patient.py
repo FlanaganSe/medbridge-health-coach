@@ -14,6 +14,7 @@ class PatientCreate(BaseModel):
 
     tenant_id: str
     external_patient_id: str
+    display_name: str | None = None
     timezone: str = "America/New_York"
 
     @field_validator("timezone")
@@ -36,6 +37,7 @@ class PatientRead(BaseModel):
     id: uuid.UUID
     tenant_id: str
     external_patient_id: str
+    display_name: str | None
     phase: str
     timezone: str
     unanswered_count: int

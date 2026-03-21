@@ -1,10 +1,11 @@
-import { HeartPulse, RefreshCw, RotateCcw, UserPlus, Zap } from "lucide-react";
+import { HeartPulse, Plus, RefreshCw, RotateCcw, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
-import type { ResetPatientResponse, TriggerFollowupResponse } from "../types";
+import type { DemoPatient, Phase, ResetPatientResponse } from "../types";
 import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { CreatePatientDialog } from "./ui/CreatePatientDialog";
 import { PatientSelector } from "./ui/PatientSelector";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -13,19 +14,15 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-interface Patient {
-  id: string;
-  name: string;
-}
-
 interface TopBarProps {
-  patients: Patient[];
+  patients: DemoPatient[];
   selectedPatientId: string;
   onPatientChange: (id: string) => void;
   patientId: string;
-  externalPatientId: string;
   tenantId: string;
-  onPatientSeeded: (id: string) => void;
+  phase: Phase;
+  onPatientSeeded: (id: string) => Promise<void>;
+  onPatientDeleted: () => Promise<void>;
   onStateChanged: () => void;
   onReset: () => void;
 }
@@ -35,20 +32,23 @@ export function TopBar({
   selectedPatientId,
   onPatientChange,
   patientId,
-  externalPatientId,
   tenantId,
+  phase,
   onPatientSeeded,
+  onPatientDeleted,
   onStateChanged,
   onReset,
 }: TopBarProps) {
-  const [seedStatus, setSeedStatus] = useState<Status>("idle");
-  const [triggerStatus, setTriggerStatus] = useState<Status>("idle");
+  const [checkinStatus, setCheckinStatus] = useState<Status>("idle");
   const [resetStatus, setResetStatus] = useState<Status>("idle");
+  const [createStatus, setCreateStatus] = useState<Status>("idle");
   const [statusMessage, setStatusMessage] = useState<{
     text: string;
     type: "success" | "error";
   } | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -66,31 +66,16 @@ export function TopBar({
     [],
   );
 
-  const handleSeed = useCallback(async () => {
-    setSeedStatus("loading");
+  const handleCheckin = useCallback(async () => {
+    setCheckinStatus("loading");
     try {
-      const data = await api.seedPatient(tenantId, externalPatientId);
-      onPatientSeeded(data.patient_id);
-      setSeedStatus("success");
-      showStatus(`Patient seeded (${data.phase})`, "success");
+      const data = await api.runCheckin(patientId);
+      setCheckinStatus("success");
+      showStatus(`Check-in complete (phase: ${data.phase})`, "success");
       onStateChanged();
     } catch (err) {
-      setSeedStatus("error");
-      showStatus(`Seed failed: ${errorMessage(err)}`, "error");
-    }
-  }, [tenantId, externalPatientId, onPatientSeeded, showStatus, onStateChanged]);
-
-  const handleTrigger = useCallback(async () => {
-    setTriggerStatus("loading");
-    try {
-      const data: TriggerFollowupResponse =
-        await api.triggerFollowup(patientId);
-      setTriggerStatus("success");
-      showStatus(`Expedited ${data.job_type}`, "success");
-      onStateChanged();
-    } catch (err) {
-      setTriggerStatus("error");
-      showStatus(`No pending check-ins: ${errorMessage(err)}`, "error");
+      setCheckinStatus("error");
+      showStatus(`Check-in failed: ${errorMessage(err)}`, "error");
     }
   }, [patientId, showStatus, onStateChanged]);
 
@@ -111,6 +96,39 @@ export function TopBar({
       showStatus(`Reset failed: ${errorMessage(err)}`, "error");
     }
   }, [patientId, showStatus, onStateChanged, onReset]);
+
+  const handleCreatePatient = useCallback(
+    async (displayName: string) => {
+      setCreateStatus("loading");
+      try {
+        const data = await api.seedPatient(tenantId, crypto.randomUUID(), displayName);
+        setCreateStatus("idle");
+        setCreateDialogOpen(false);
+        showStatus(`Patient created: ${displayName}`, "success");
+        await onPatientSeeded(data.patient_id);
+      } catch (err) {
+        setCreateStatus("error");
+        showStatus(`Create failed: ${errorMessage(err)}`, "error");
+      }
+    },
+    [tenantId, onPatientSeeded, showStatus],
+  );
+
+  const handleDeletePatient = useCallback(async () => {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
+    try {
+      await api.deletePatient(id);
+      showStatus("Patient deleted", "success");
+      await onPatientDeleted();
+    } catch (err) {
+      showStatus(`Delete failed: ${errorMessage(err)}`, "error");
+    }
+  }, [confirmDeleteId, onPatientDeleted, showStatus]);
+
+  const checkinDisabled =
+    phase === "pending" || phase === "onboarding" || !patientId;
 
   return (
     <>
@@ -134,28 +152,36 @@ export function TopBar({
             patients={patients}
             selectedId={selectedPatientId}
             onChange={onPatientChange}
+            onDelete={(id) => setConfirmDeleteId(id)}
+          />
+
+          <Button
+            label="New Patient"
+            icon={Plus}
+            onClick={() => setCreateDialogOpen(true)}
           />
 
           <div className="h-6 w-px bg-border-primary" />
 
           <Button
-            label="Seed Patient"
-            icon={UserPlus}
-            loading={seedStatus === "loading"}
-            onClick={handleSeed}
-          />
-          <Button
             label="Run Check-in"
             icon={Zap}
             variant="primary"
-            loading={triggerStatus === "loading"}
-            onClick={handleTrigger}
+            loading={checkinStatus === "loading"}
+            disabled={checkinDisabled}
+            title={
+              checkinDisabled
+                ? "Complete onboarding first (confirm a goal)"
+                : undefined
+            }
+            onClick={handleCheckin}
           />
           <Button
             label="Reset"
             icon={RotateCcw}
             danger
             loading={resetStatus === "loading"}
+            disabled={!patientId}
             onClick={() => setConfirmResetOpen(true)}
           />
           <Button
@@ -187,6 +213,22 @@ export function TopBar({
         confirmLabel="Reset"
         onConfirm={handleReset}
         onCancel={() => setConfirmResetOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete Patient?"
+        description="This will permanently delete the patient and all associated data (goals, jobs, conversation history). This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDeletePatient}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <CreatePatientDialog
+        open={createDialogOpen}
+        loading={createStatus === "loading"}
+        onConfirm={handleCreatePatient}
+        onCancel={() => setCreateDialogOpen(false)}
       />
     </>
   );

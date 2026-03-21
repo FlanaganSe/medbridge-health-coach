@@ -64,17 +64,30 @@ export interface ConversationMessage {
 
 // --- API Response Wrappers ---
 
+export interface DemoPatient {
+  patient_id: string;
+  external_patient_id: string;
+  display_name: string | null;
+  phase: Phase;
+  created_at: string;
+}
+
 export interface SeedPatientResponse {
   patient_id: string;
   external_patient_id: string;
+  display_name: string | null;
   phase: Phase;
 }
 
-export interface TriggerFollowupResponse {
-  job_id: string;
-  job_type: string;
-  original_scheduled_at: string;
+export interface RunCheckinResponse {
+  patient_id: string;
+  phase: Phase;
   status: string;
+}
+
+export interface DeletePatientResponse {
+  patient_id: string;
+  deleted: boolean;
 }
 
 export interface ResetPatientResponse {
