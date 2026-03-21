@@ -21,10 +21,10 @@ export function PipelineStepper({ nodes, isStreaming }: PipelineStepperProps) {
       <button
         onClick={() => setExpanded(true)}
         className={clsx(
-          "flex w-full items-center gap-2 border-b border-border px-6 py-2 text-[11px] hover:opacity-80",
+          "flex w-full items-center gap-2 border-b border-border-primary px-6 py-2 text-[11px] hover:opacity-80",
           done
-            ? "bg-green-badge-bg text-green-badge-text"
-            : "bg-blue-badge-bg text-blue-badge-text",
+            ? "bg-green-light text-green"
+            : "bg-teal-light text-teal",
         )}
       >
         {done && <Check size={12} />}
@@ -39,7 +39,7 @@ export function PipelineStepper({ nodes, isStreaming }: PipelineStepperProps) {
   }
 
   return (
-    <div className="border-b border-border bg-bg-faint px-6 py-3">
+    <div className="border-b border-border-primary bg-bg-page px-6 py-3">
       <div className="flex items-center gap-2">
         <span className="text-[11px] font-semibold tracking-wide text-text-secondary">
           PIPELINE
@@ -62,12 +62,12 @@ export function PipelineStepper({ nodes, isStreaming }: PipelineStepperProps) {
             <li key={node.name} className="flex items-start gap-2.5">
               <div className="flex flex-col items-center">
                 {node.status === "complete" ? (
-                  <CircleCheck size={16} className="shrink-0 text-green-badge-text" />
+                  <CircleCheck size={16} className="shrink-0 text-green" />
                 ) : node.status === "running" ? (
                   <>
                     <Loader2
                       size={16}
-                      className="shrink-0 animate-spin text-blue-badge-text"
+                      className="shrink-0 animate-spin text-teal"
                       aria-hidden="true"
                     />
                     <span className="sr-only">Running</span>
@@ -75,13 +75,13 @@ export function PipelineStepper({ nodes, isStreaming }: PipelineStepperProps) {
                 ) : (
                   <Circle size={16} className="shrink-0 text-text-muted" />
                 )}
-                {!isLast && <div className="min-h-2 w-px flex-1 bg-border" />}
+                {!isLast && <div className="min-h-2 w-px flex-1 bg-border-primary" />}
               </div>
               <span
                 className={clsx(
                   "pb-2 text-[13px] leading-4",
-                  node.status === "complete" && "font-medium text-green-badge-text",
-                  node.status === "running" && "font-medium text-blue-badge-text",
+                  node.status === "complete" && "font-medium text-green",
+                  node.status === "running" && "font-medium text-teal",
                   node.status === "pending" && "text-text-muted",
                 )}
               >

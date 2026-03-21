@@ -46,7 +46,7 @@ function SuggestionChips({
             key={text}
             type="button"
             onClick={() => onSelect(text)}
-            className="rounded-full border border-border px-4 py-2 text-sm text-text-secondary hover:bg-bg-faint"
+            className="rounded-full border border-border-primary px-4 py-2 text-sm text-text-secondary transition-colors hover:border-teal/30 hover:bg-teal-light hover:text-teal"
           >
             {text}
           </button>
@@ -129,15 +129,15 @@ export function ChatPanel({
   );
 
   return (
-    <div className="flex flex-1 flex-col border-r border-border bg-white">
+    <div className="flex flex-1 flex-col border-r border-border-primary bg-bg-card">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+      <div className="flex shrink-0 items-center justify-between border-b border-border-divider px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-badge-bg">
-            <Bot size={18} className="text-blue-badge-text" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-light">
+            <Bot size={18} className="text-teal" />
           </div>
           <div>
-            <div className="font-heading text-[15px] font-semibold text-text-primary">
+            <div className="font-heading text-[16px] font-medium text-text-primary">
               Health Ally
             </div>
             <div className="text-xs text-text-secondary">
@@ -164,10 +164,10 @@ export function ChatPanel({
         {/* Streaming indicator */}
         {isStreaming && streamingText && (
           <div className="flex w-full gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-badge-bg">
-              <Bot size={18} className="text-blue-badge-text" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-light">
+              <Bot size={16} className="text-teal" />
             </div>
-            <div className="max-w-[520px] rounded-bl-xl rounded-br-xl rounded-tr-xl bg-bg-subtle px-4 py-3">
+            <div className="max-w-[520px] rounded-[12px_12px_12px_4px] border border-border-primary bg-bg-muted px-4 py-3">
               <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
                 {streamingText}
               </p>
@@ -176,7 +176,7 @@ export function ChatPanel({
         )}
 
         {isStreaming && !streamingText && (
-          <div className="flex items-center gap-2 text-sm text-text-muted">
+          <div className="flex items-center gap-2 text-sm text-teal">
             <span className="inline-flex gap-0.5">
               <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
               <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
@@ -195,7 +195,7 @@ export function ChatPanel({
           e.preventDefault();
           void handleSend();
         }}
-        className="flex shrink-0 items-center gap-3 border-t border-border bg-white px-6 py-4"
+        className="flex shrink-0 items-center gap-3 border-t border-border-divider bg-bg-card px-6 py-4"
       >
         <input
           value={input}
@@ -203,13 +203,13 @@ export function ChatPanel({
           placeholder="Type a message..."
           maxLength={4000}
           disabled={isStreaming}
-          className="h-11 flex-1 rounded-lg border border-border bg-bg-subtle px-4 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-blue-badge-text"
+          className="h-11 flex-1 rounded-lg border border-border-primary bg-bg-muted px-4 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-teal"
         />
         <button
           type="submit"
           disabled={isStreaming || !input.trim()}
           aria-label="Send message"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-red text-white transition-opacity disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal text-white transition-opacity disabled:opacity-40"
         >
           <Send size={18} />
         </button>

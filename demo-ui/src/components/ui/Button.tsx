@@ -28,16 +28,19 @@ export function Button({
       onClick={onClick}
       disabled={isDisabled}
       className={clsx(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-md px-4.5 text-[13px] font-medium transition-opacity",
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] px-4 text-[13px] font-medium transition-opacity",
         isDisabled && "cursor-not-allowed opacity-50",
         variant === "primary" && [
-          "bg-text-primary text-white",
+          "bg-teal text-white",
           !isDisabled && "hover:opacity-90",
         ],
-        variant === "secondary" && [
-          "border border-border bg-white",
-          danger ? "text-red-badge-text" : "text-text-primary",
-          !isDisabled && "hover:bg-bg-faint",
+        variant === "secondary" && !danger && [
+          "border border-border-primary bg-bg-card text-text-primary",
+          !isDisabled && "hover:bg-bg-muted",
+        ],
+        variant === "secondary" && danger && [
+          "bg-red-light text-red",
+          !isDisabled && "hover:opacity-90",
         ],
       )}
     >
@@ -67,8 +70,8 @@ export function Button({
           <Icon
             size={14}
             className={clsx(
-              variant === "secondary" &&
-                (danger ? "text-red-badge-text" : "text-text-secondary"),
+              variant === "secondary" && !danger && "text-text-tertiary",
+              variant === "secondary" && danger && "text-red",
             )}
           />
         )

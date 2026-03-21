@@ -1,43 +1,42 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand */
-  --color-brand-red: #E42313;
+  /* Primary */
+  --color-teal: #0D6E6E;
+  --color-teal-light: #E8F5F5;
 
   /* Text */
-  --color-text-primary: #0D0D0D;
-  --color-text-secondary: #7A7A7A;
-  --color-text-muted: #767676;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #888888;
+  --color-text-muted: #AAAAAA;
+  --color-text-disabled: #BBBBBB;
+  --color-text-subtle: #CCCCCC;
 
   /* Backgrounds */
-  --color-bg-page: #F5F5F5;
-  --color-bg-subtle: #F5F5F5;
-  --color-bg-white: #FFFFFF;
-  --color-bg-faint: #FAFAFA;
+  --color-bg-page: #FAFAFA;
+  --color-bg-card: #FFFFFF;
+  --color-bg-muted: #F8F8F8;
+  --color-bg-control: #F0F0F0;
 
   /* Borders */
-  --color-border: #E8E8E8;
+  --color-border-primary: #E5E5E5;
+  --color-border-divider: #F0F0F0;
 
-  /* Green (phase active, safe, goals) */
-  --color-green-badge-bg: #EEF9F3;
-  --color-green-badge-text: #16A34A;
-  --color-green-dot: #22C55E;
+  /* Status: Green */
+  --color-green: #28A745;
+  --color-green-light: #E6F9ED;
 
-  /* Red (urgent, crisis) */
-  --color-red-badge-bg: #FEF2F2;
-  --color-red-badge-text: #DC2626;
+  /* Status: Orange */
+  --color-orange: #E07B54;
+  --color-orange-light: #FEF3EE;
 
-  /* Blue (routine, bot avatar) */
-  --color-blue-badge-bg: #F0F4FF;
-  --color-blue-badge-text: #3B82F6;
-
-  /* Amber (pending, tool calls) */
-  --color-amber-badge-bg: #FFF7ED;
-  --color-amber-badge-text: #D97706;
-  --color-amber-dot: #F59E0B;
+  /* Status: Red */
+  --color-red: #DC3545;
+  --color-red-light: #FDE8EA;
 
   /* Typography */
-  --font-heading: "Space Grotesk", sans-serif;
+  --font-heading: "Newsreader", serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
@@ -98,7 +97,7 @@
 .prose li { margin-bottom: 0.25em; }
 .prose strong { font-weight: 600; }
 .prose em { font-style: italic; }
-.prose code { font-family: var(--font-mono); font-size: 0.875em; background: var(--color-border); padding: 0.1em 0.3em; border-radius: 0.25rem; }
+.prose code { font-family: var(--font-mono); font-size: 0.875em; background: var(--color-bg-control); padding: 0.1em 0.3em; border-radius: 0.25rem; }
 .prose h1, .prose h2, .prose h3 { font-weight: 600; margin-bottom: 0.25em; }
 .prose h2 { font-size: 1.05em; }
 .prose h3 { font-size: 1em; }

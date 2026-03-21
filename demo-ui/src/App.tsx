@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { usePatientState } from "./hooks/usePatientState";
 import { ChatPanel } from "./components/ChatPanel";
-import { DemoControlBar } from "./components/DemoControlBar";
 import { ObservabilityPanel } from "./components/ObservabilityPanel";
 import { TopBar } from "./components/TopBar";
 
@@ -44,10 +43,7 @@ export function App() {
       <TopBar
         patients={DEMO_PATIENTS}
         selectedPatientId={externalPatientId}
-        internalId={internalId}
         onPatientChange={handlePatientChange}
-      />
-      <DemoControlBar
         patientId={effectivePatientId}
         externalPatientId={externalPatientId}
         tenantId={TENANT_ID}

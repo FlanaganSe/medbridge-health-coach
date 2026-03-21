@@ -41,7 +41,7 @@ export function ConfirmDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg"
+        className="w-full max-w-sm rounded-xl bg-bg-card p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -60,13 +60,13 @@ export function ConfirmDialog({
           <button
             ref={cancelRef}
             onClick={onCancel}
-            className="rounded-md border border-border bg-white px-4 py-2 text-[13px] font-medium text-text-primary hover:bg-bg-faint"
+            className="rounded-[6px] border border-border-primary bg-bg-card px-4 py-2 text-[13px] font-medium text-text-primary hover:bg-bg-muted"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-md bg-red-badge-text px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+            className="rounded-[6px] bg-red px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
           >
             {confirmLabel}
           </button>

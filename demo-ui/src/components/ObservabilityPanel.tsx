@@ -41,15 +41,15 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+      <span className="font-mono text-[11px] font-semibold tracking-[2px] text-text-tertiary uppercase">
         {title}
       </span>
       {count !== undefined && (
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          className={`font-mono text-[11px] font-semibold ${
             countVariant === "danger"
-              ? "bg-red-badge-bg text-red-badge-text"
-              : "bg-bg-subtle text-text-secondary"
+              ? "text-red"
+              : "text-text-muted"
           }`}
         >
           {count}
@@ -59,17 +59,9 @@ function SectionHeader({
   );
 }
 
-function Section({
-  children,
-  border = true,
-}: {
-  children: React.ReactNode;
-  border?: boolean;
-}) {
+function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={`flex flex-col gap-3 px-5 py-4 ${border ? "border-b border-border" : ""}`}
-    >
+    <div className="flex flex-col gap-3 rounded-xl border border-border-primary bg-bg-card p-5">
       {children}
     </div>
   );
@@ -84,10 +76,10 @@ const RED_OUTCOMES = new Set(["denied", "block", "blocked", "clinical_boundary",
 
 function AuditOutcomeBadge({ outcome }: { outcome: string }) {
   const color = GREEN_OUTCOMES.has(outcome)
-    ? "bg-green-badge-bg text-green-badge-text"
+    ? "bg-green-light text-green"
     : RED_OUTCOMES.has(outcome)
-      ? "bg-red-badge-bg text-red-badge-text"
-      : "bg-amber-badge-bg text-amber-badge-text";
+      ? "bg-red-light text-red"
+      : "bg-orange-light text-orange";
 
   return (
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${color}`}>
@@ -107,22 +99,22 @@ export function ObservabilityPanel({
   ).length;
 
   return (
-    <div className="flex w-[420px] shrink-0 flex-col overflow-y-auto bg-white">
+    <div className="flex w-[420px] shrink-0 flex-col gap-4 overflow-y-auto bg-bg-page p-4">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-        <span className="font-heading text-[15px] font-semibold text-text-primary">
+      <div className="flex items-center justify-between px-1">
+        <span className="font-heading text-lg font-medium text-text-primary">
           Observability
         </span>
         {loadState === "loading" && (
-          <span className="inline-block h-3 w-16 rounded bg-border animate-pulse" />
+          <span className="inline-block h-3 w-16 rounded bg-border-primary animate-pulse" />
         )}
         {loadState === "error" && (
           <span className="flex items-center gap-2">
-            <span className="text-xs text-red-badge-text">Error</span>
+            <span className="text-xs text-red">Error</span>
             {onRetry && (
               <button
                 onClick={onRetry}
-                className="text-xs text-blue-badge-text hover:underline"
+                className="text-xs text-teal hover:underline"
               >
                 Retry
               </button>
@@ -130,7 +122,7 @@ export function ObservabilityPanel({
           </span>
         )}
         {loadState === "loaded" && lastUpdated && (
-          <span className="text-xs text-text-muted">
+          <span className="font-mono text-[11px] text-text-muted">
             {lastUpdated.toLocaleTimeString([], {
               hour: "numeric",
               minute: "2-digit",
@@ -151,7 +143,7 @@ export function ObservabilityPanel({
         {state.goals.length === 0 && <EmptyState text="No goals set" />}
         {state.goals.map((g) => (
           <div key={g.id} className="flex items-start gap-2.5">
-            <CircleCheck size={16} className="mt-0.5 shrink-0 text-green-dot" />
+            <CircleCheck size={16} className="mt-0.5 shrink-0 text-green" />
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-medium text-text-primary">
                 {g.goal_text}
@@ -203,7 +195,7 @@ export function ObservabilityPanel({
             <SafetyBadge decision={d.decision} />
             <div className="min-w-0 flex-1">
               <div className="text-xs text-text-secondary">{d.source}</div>
-              <div className="text-[11px] text-text-muted">
+              <div className="font-mono text-[11px] text-text-muted">
                 confidence: {(d.confidence * 100).toFixed(0)}%
               </div>
             </div>
@@ -258,9 +250,9 @@ export function ObservabilityPanel({
           m.role === "tool" ? (
             <div
               key={m.message_id}
-              className="ml-6 flex items-start gap-2 border-l-2 border-amber-badge-text/30 pl-2"
+              className="ml-6 flex items-start gap-2 border-l-2 border-orange/30 pl-2"
             >
-              <span className="mt-0.5 shrink-0 font-mono text-[10px] font-medium text-amber-badge-text">
+              <span className="mt-0.5 shrink-0 font-mono text-[10px] font-medium text-orange">
                 {m.tool_name}
               </span>
               <div className="min-w-0 flex-1 text-[11px] text-text-muted">
@@ -272,8 +264,8 @@ export function ObservabilityPanel({
               <span
                 className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
                   m.role === "ai"
-                    ? "bg-blue-badge-bg text-blue-badge-text"
-                    : "bg-bg-subtle text-text-secondary"
+                    ? "bg-teal-light text-teal"
+                    : "bg-bg-muted text-text-secondary"
                 }`}
               >
                 {m.role === "ai" ? "Coach" : "User"}
@@ -292,7 +284,7 @@ export function ObservabilityPanel({
       </Section>
 
       {/* Audit Trail */}
-      <Section border={false}>
+      <Section>
         <SectionHeader
           title="Audit Trail"
           count={state.auditEvents.length}

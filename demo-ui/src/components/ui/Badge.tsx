@@ -11,27 +11,27 @@ import type { Phase, SafetyDecision } from "../../types";
 
 const PHASE_STYLES: Record<Phase, { bg: string; text: string; dot: string }> = {
   pending: {
-    bg: "bg-bg-subtle",
+    bg: "bg-bg-muted",
     text: "text-text-secondary",
     dot: "bg-text-secondary",
   },
   onboarding: {
-    bg: "bg-blue-badge-bg",
-    text: "text-blue-badge-text",
-    dot: "bg-blue-badge-text",
+    bg: "bg-teal-light",
+    text: "text-teal",
+    dot: "bg-teal",
   },
   active: {
-    bg: "bg-green-badge-bg",
-    text: "text-green-badge-text",
-    dot: "bg-green-dot",
+    bg: "bg-green-light",
+    text: "text-green",
+    dot: "bg-green",
   },
   re_engaging: {
-    bg: "bg-amber-badge-bg",
-    text: "text-amber-badge-text",
-    dot: "bg-amber-dot",
+    bg: "bg-orange-light",
+    text: "text-orange",
+    dot: "bg-orange",
   },
   dormant: {
-    bg: "bg-bg-subtle",
+    bg: "bg-bg-muted",
     text: "text-text-secondary",
     dot: "bg-text-muted",
   },
@@ -92,8 +92,8 @@ export function AlertBadge() {
     <StatusBadge
       label="URGENT"
       Icon={TriangleAlert}
-      bg="bg-red-badge-bg"
-      text="text-red-badge-text"
+      bg="bg-red-light"
+      text="text-red"
     />
   );
 }
@@ -102,8 +102,8 @@ export function RoutineBadge() {
   return (
     <StatusBadge
       label="ROUTINE"
-      bg="bg-blue-badge-bg"
-      text="text-blue-badge-text"
+      bg="bg-teal-light"
+      text="text-teal"
     />
   );
 }
@@ -115,19 +115,19 @@ const SAFETY_STYLES: Record<
   { bg: string; text: string; Icon?: LucideIcon }
 > = {
   safe: {
-    bg: "bg-green-badge-bg",
-    text: "text-green-badge-text",
+    bg: "bg-green-light",
+    text: "text-green",
     Icon: ShieldCheck,
   },
-  block: { bg: "bg-red-badge-bg", text: "text-red-badge-text" },
+  block: { bg: "bg-red-light", text: "text-red" },
   clinical_boundary: {
-    bg: "bg-red-badge-bg",
-    text: "text-red-badge-text",
+    bg: "bg-red-light",
+    text: "text-red",
     Icon: TriangleAlert,
   },
   crisis: {
-    bg: "bg-red-badge-bg",
-    text: "text-red-badge-text",
+    bg: "bg-red-light",
+    text: "text-red",
     Icon: TriangleAlert,
   },
 };
@@ -148,8 +148,8 @@ export function SafetyBadge({ decision }: { decision: SafetyDecision }) {
 
 export function JobCompleteBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded bg-green-badge-bg px-2 py-0.5 text-[11px] font-medium text-green-badge-text">
-      <span className="h-1.5 w-1.5 rounded-full bg-green-dot" />
+    <span className="inline-flex items-center gap-1.5 rounded bg-green-light px-2 py-0.5 text-[11px] font-medium text-green">
+      <span className="h-1.5 w-1.5 rounded-full bg-green" />
       completed
     </span>
   );
@@ -157,8 +157,8 @@ export function JobCompleteBadge() {
 
 export function JobPendingBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded bg-amber-badge-bg px-2 py-0.5 text-[11px] font-medium text-amber-badge-text">
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-dot" />
+    <span className="inline-flex items-center gap-1.5 rounded bg-orange-light px-2 py-0.5 text-[11px] font-medium text-orange">
+      <span className="h-1.5 w-1.5 rounded-full bg-orange" />
       pending
     </span>
   );
@@ -173,7 +173,7 @@ export function JobStatusBadge({
   if (status === "pending" || status === "processing")
     return <JobPendingBadge />;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded bg-bg-subtle px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+    <span className="inline-flex items-center gap-1.5 rounded bg-bg-muted px-2 py-0.5 text-[11px] font-medium text-text-secondary">
       <span className="h-1.5 w-1.5 rounded-full bg-text-muted" />
       {status}
     </span>

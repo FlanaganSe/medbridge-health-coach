@@ -10,16 +10,16 @@ function formatTime(date: Date): string {
 function BotMessage({ content, timestamp }: ChatMessageType) {
   return (
     <div className="flex w-full gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-badge-bg">
-        <Bot size={18} className="text-blue-badge-text" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-light">
+        <Bot size={16} className="text-teal" />
       </div>
       <div className="max-w-[520px]">
-        <div className="rounded-bl-xl rounded-br-xl rounded-tr-xl bg-bg-subtle px-4 py-3">
+        <div className="rounded-[12px_12px_12px_4px] border border-border-primary bg-bg-muted px-4 py-3">
           <div className="prose text-sm leading-relaxed text-text-primary">
             <ReactMarkdown>{content}</ReactMarkdown>
           </div>
         </div>
-        <span className="mt-1 block text-[11px] text-text-muted">
+        <span className="mt-1 block font-mono text-[10px] text-text-muted">
           {formatTime(timestamp)}
         </span>
       </div>
@@ -31,13 +31,13 @@ function BotMessage({ content, timestamp }: ChatMessageType) {
 function UserMessage({ content, timestamp }: ChatMessageType) {
   return (
     <div className="flex w-full justify-end">
-      <div className="max-w-[280px]">
-        <div className="rounded-bl-xl rounded-br-xl rounded-tl-xl bg-text-primary px-4 py-3">
+      <div className="max-w-[400px]">
+        <div className="rounded-[12px_12px_4px_12px] bg-teal px-4 py-3">
           <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
             {content}
           </p>
         </div>
-        <span className="mt-1 block text-right text-[11px] text-text-secondary">
+        <span className="mt-1 block text-right font-mono text-[10px] text-text-muted">
           {formatTime(timestamp)}
         </span>
       </div>
@@ -53,19 +53,19 @@ function ToolMessage({
 }: ChatMessageType) {
   return (
     <div className="flex w-full gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-badge-bg">
-        <Wrench size={16} className="text-amber-badge-text" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-light">
+        <Wrench size={16} className="text-orange" />
       </div>
       <div className="max-w-[520px]">
-        <div className="rounded-bl-xl rounded-br-xl rounded-tr-xl bg-amber-badge-bg px-4 py-3">
-          <span className="font-mono text-xs font-semibold text-amber-badge-text">
+        <div className="rounded-[12px_12px_12px_4px] bg-orange-light px-4 py-3">
+          <span className="font-mono text-xs font-semibold text-orange">
             Tool: {toolName}
           </span>
           <p className="mt-1.5 text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
             {content}
           </p>
         </div>
-        <span className="mt-1 block text-[11px] text-text-muted">
+        <span className="mt-1 block font-mono text-[10px] text-text-muted">
           {formatTime(timestamp)}
         </span>
       </div>
@@ -77,16 +77,16 @@ function ToolMessage({
 function ErrorMessage({ content, timestamp }: ChatMessageType) {
   return (
     <div className="flex w-full gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-badge-bg">
-        <AlertCircle size={18} className="text-red-badge-text" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-light">
+        <AlertCircle size={16} className="text-red" />
       </div>
       <div className="max-w-[520px]">
-        <div className="rounded-bl-xl rounded-br-xl rounded-tr-xl bg-red-badge-bg px-4 py-3">
-          <p className="text-sm leading-relaxed text-red-badge-text">
+        <div className="rounded-[12px_12px_12px_4px] bg-red-light px-4 py-3">
+          <p className="text-sm leading-relaxed text-red">
             {content}
           </p>
         </div>
-        <span className="mt-1 block text-[11px] text-text-muted">
+        <span className="mt-1 block font-mono text-[10px] text-text-muted">
           {formatTime(timestamp)}
         </span>
       </div>

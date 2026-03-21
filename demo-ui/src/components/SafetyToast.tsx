@@ -26,11 +26,11 @@ export function SafetyToast({ toast, onDismiss }: SafetyToastProps) {
   if (!toast) return null;
 
   return (
-    <div className="fixed right-6 top-20 z-50 animate-in-right w-80 rounded-lg border border-red-badge-text/20 bg-red-badge-bg p-4 shadow-lg">
+    <div className="fixed right-6 top-20 z-50 animate-in-right w-80 rounded-lg border border-red/20 bg-red-light p-4 shadow-lg">
       <div className="flex items-start gap-3">
-        <ShieldAlert size={20} className="shrink-0 text-red-badge-text" />
+        <ShieldAlert size={20} className="shrink-0 text-red" />
         <div className="flex-1">
-          <div className="text-[13px] font-semibold text-red-badge-text">
+          <div className="text-[13px] font-semibold text-red">
             {LABELS[toast.decision] ?? toast.decision}
           </div>
           {toast.confidence > 0 && (
