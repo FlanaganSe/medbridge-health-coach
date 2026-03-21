@@ -86,6 +86,8 @@ async def app(settings: Settings, engine: AsyncEngine) -> FastAPI:
     application.state.session_factory = create_session_factory(engine)
     application.state.langgraph_pool = None
     application.state.graph = compile_graph(checkpointer=create_checkpointer())  # type: ignore[arg-type]
+    # ctx_factory stub — returns a MagicMock context (sufficient for demo endpoint tests)
+    application.state.ctx_factory = MagicMock(return_value=MagicMock())
     return application
 
 

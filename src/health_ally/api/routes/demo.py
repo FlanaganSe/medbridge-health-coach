@@ -19,6 +19,7 @@ from sqlalchemy import delete, select
 from health_ally.persistence.locking import patient_advisory_lock
 from health_ally.persistence.models import (
     AuditEvent,
+    DeliveryAttempt,
     OutboxEntry,
     Patient,
     PatientConsentSnapshot,
@@ -189,9 +190,9 @@ async def seed_patient(
         patient = existing.scalars().first()
 
         if patient is not None:
-            # Update display_name if provided and currently unset
-            if body.display_name and not patient.display_name:
-                patient.display_name = body.display_name
+            # Update display_name if a non-empty value is provided
+            if body.display_name is not None and body.display_name != patient.display_name:
+                patient.display_name = body.display_name or None
                 await session.flush()
             return SeedPatientResponse(
                 patient_id=str(patient.id),
@@ -297,16 +298,15 @@ async def delete_patient(
         if patient is None:
             raise HTTPException(status_code=404, detail="Patient not found")
 
-        # Delete FK-dependent records first
+        # Delete FK-dependent records, deepest children first
+        # DeliveryAttempt → OutboxEntry (FK: outbox_entry_id)
+        outbox_ids = select(OutboxEntry.id).where(OutboxEntry.patient_id == pid)
         await session.execute(
-            delete(PatientGoal).where(PatientGoal.patient_id == pid)
+            delete(DeliveryAttempt).where(DeliveryAttempt.outbox_entry_id.in_(outbox_ids))
         )
-        await session.execute(
-            delete(ScheduledJob).where(ScheduledJob.patient_id == pid)
-        )
-        await session.execute(
-            delete(OutboxEntry).where(OutboxEntry.patient_id == pid)
-        )
+        await session.execute(delete(PatientGoal).where(PatientGoal.patient_id == pid))
+        await session.execute(delete(ScheduledJob).where(ScheduledJob.patient_id == pid))
+        await session.execute(delete(OutboxEntry).where(OutboxEntry.patient_id == pid))
         await session.execute(
             delete(PatientConsentSnapshot).where(PatientConsentSnapshot.patient_id == pid)
         )
@@ -605,7 +605,11 @@ async def run_checkin(
                 "tenant_id": tenant_id,
                 "messages": [],
                 "invocation_source": "scheduler",
-                "_job_metadata": {"follow_up_day": 2},
+                "_job_metadata": (
+                    {"follow_up_day": 2, "source": "re_engagement"}
+                    if phase == "re_engaging"
+                    else {"follow_up_day": 2}
+                ),
             },
             config={
                 "configurable": {

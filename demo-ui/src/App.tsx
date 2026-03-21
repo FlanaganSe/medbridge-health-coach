@@ -16,25 +16,27 @@ export function App() {
   const [resetKey, setResetKey] = useState(0);
 
   const refreshPatients = useCallback(async () => {
-    const list = await api.listPatients(TENANT_ID);
-    setPatients(list);
-    return list;
-  }, []);
+    try {
+      const list = await api.listPatients(TENANT_ID);
+      setPatients(list);
+      return list;
+    } catch {
+      // Silently fail — patients list stays as-is
+      return patients;
+    }
+  }, [patients]);
 
   // Fetch patients on mount
   useEffect(() => {
-    refreshPatients();
-  }, [refreshPatients]);
+    void api.listPatients(TENANT_ID).then(setPatients);
+  }, []);
 
-  // Auto-select first patient when list loads and nothing is selected
+  // Auto-select first patient when list loads and nothing is selected,
+  // or when selected patient was deleted
   useEffect(() => {
-    if (!selectedPatientId && patients.length > 0) {
-      setSelectedPatientId(patients[0].patient_id);
-    }
-    // If selected patient was deleted, select first remaining
+    if (patients.length === 0) return;
     if (
-      selectedPatientId &&
-      patients.length > 0 &&
+      !selectedPatientId ||
       !patients.some((p) => p.patient_id === selectedPatientId)
     ) {
       setSelectedPatientId(patients[0].patient_id);
@@ -53,7 +55,6 @@ export function App() {
   const handlePatientSeeded = useCallback(
     async (patientId: string) => {
       const list = await refreshPatients();
-      // Select the newly seeded patient
       if (list.some((p) => p.patient_id === patientId)) {
         setSelectedPatientId(patientId);
       }
@@ -67,7 +68,7 @@ export function App() {
 
   const handleReset = useCallback(() => {
     setResetKey((k) => k + 1);
-    refreshPatients();
+    void refreshPatients();
   }, [refreshPatients]);
 
   return (
@@ -76,7 +77,6 @@ export function App() {
         patients={patients}
         selectedPatientId={selectedPatientId ?? ""}
         onPatientChange={handlePatientChange}
-        patientId={selectedPatientId ?? ""}
         tenantId={TENANT_ID}
         phase={state.phase}
         onPatientSeeded={handlePatientSeeded}

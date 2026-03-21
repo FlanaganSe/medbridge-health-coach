@@ -454,9 +454,7 @@ async def test_run_checkin_rejects_onboarding_phase(app: FastAPI) -> None:
     # Manually set phase to onboarding
     async with app.state.session_factory() as session, session.begin():
         await session.execute(
-            update(Patient)
-            .where(Patient.id == uuid.UUID(patient_id))
-            .values(phase="onboarding")
+            update(Patient).where(Patient.id == uuid.UUID(patient_id)).values(phase="onboarding")
         )
 
     async with AsyncClient(
@@ -483,16 +481,13 @@ async def test_run_checkin_succeeds_for_active_patient(app: FastAPI) -> None:
     # Set phase to active
     async with app.state.session_factory() as session, session.begin():
         await session.execute(
-            update(Patient)
-            .where(Patient.id == uuid.UUID(patient_id))
-            .values(phase="active")
+            update(Patient).where(Patient.id == uuid.UUID(patient_id)).values(phase="active")
         )
 
-    # Mock ctx_factory and graph.ainvoke
-    mock_ctx = MagicMock()
-    app.state.ctx_factory = MagicMock(return_value=mock_ctx)
+    # Mock graph.ainvoke (ctx_factory is already wired in conftest)
     original_ainvoke = app.state.graph.ainvoke
-    app.state.graph.ainvoke = AsyncMock(return_value=None)
+    mock_ainvoke = AsyncMock(return_value=None)
+    app.state.graph.ainvoke = mock_ainvoke
 
     try:
         async with AsyncClient(
@@ -507,6 +502,14 @@ async def test_run_checkin_succeeds_for_active_patient(app: FastAPI) -> None:
     data = resp.json()
     assert data["patient_id"] == patient_id
     assert data["status"] == "completed"
+
+    # Verify graph was invoked with correct arguments
+    mock_ainvoke.assert_called_once()
+    call_input = mock_ainvoke.call_args[0][0]
+    assert call_input["patient_id"] == patient_id
+    assert call_input["invocation_source"] == "scheduler"
+    assert call_input["messages"] == []
+    assert call_input["_job_metadata"] == {"follow_up_day": 2}
 
 
 async def test_run_checkin_nonexistent_patient_returns_404(app: FastAPI) -> None:

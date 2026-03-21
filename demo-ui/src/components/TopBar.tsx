@@ -18,7 +18,6 @@ interface TopBarProps {
   patients: DemoPatient[];
   selectedPatientId: string;
   onPatientChange: (id: string) => void;
-  patientId: string;
   tenantId: string;
   phase: Phase;
   onPatientSeeded: (id: string) => Promise<void>;
@@ -31,7 +30,6 @@ export function TopBar({
   patients,
   selectedPatientId,
   onPatientChange,
-  patientId,
   tenantId,
   phase,
   onPatientSeeded,
@@ -69,7 +67,7 @@ export function TopBar({
   const handleCheckin = useCallback(async () => {
     setCheckinStatus("loading");
     try {
-      const data = await api.runCheckin(patientId);
+      const data = await api.runCheckin(selectedPatientId);
       setCheckinStatus("success");
       showStatus(`Check-in complete (phase: ${data.phase})`, "success");
       onStateChanged();
@@ -77,13 +75,13 @@ export function TopBar({
       setCheckinStatus("error");
       showStatus(`Check-in failed: ${errorMessage(err)}`, "error");
     }
-  }, [patientId, showStatus, onStateChanged]);
+  }, [selectedPatientId, showStatus, onStateChanged]);
 
   const handleReset = useCallback(async () => {
     setConfirmResetOpen(false);
     setResetStatus("loading");
     try {
-      const data: ResetPatientResponse = await api.resetPatient(patientId);
+      const data: ResetPatientResponse = await api.resetPatient(selectedPatientId);
       setResetStatus("success");
       showStatus(
         `Reset: ${data.deleted_goals} goals, ${data.deleted_jobs} jobs removed`,
@@ -95,7 +93,7 @@ export function TopBar({
       setResetStatus("error");
       showStatus(`Reset failed: ${errorMessage(err)}`, "error");
     }
-  }, [patientId, showStatus, onStateChanged, onReset]);
+  }, [selectedPatientId, showStatus, onStateChanged, onReset]);
 
   const handleCreatePatient = useCallback(
     async (displayName: string) => {
@@ -128,7 +126,7 @@ export function TopBar({
   }, [confirmDeleteId, onPatientDeleted, showStatus]);
 
   const checkinDisabled =
-    phase === "pending" || phase === "onboarding" || !patientId;
+    phase === "pending" || phase === "onboarding" || !selectedPatientId;
 
   return (
     <>
@@ -181,7 +179,7 @@ export function TopBar({
             icon={RotateCcw}
             danger
             loading={resetStatus === "loading"}
-            disabled={!patientId}
+            disabled={!selectedPatientId}
             onClick={() => setConfirmResetOpen(true)}
           />
           <Button
