@@ -11,6 +11,7 @@ import type {
   SafetyDecisionItem,
   ScheduledJobItem,
   SeedPatientResponse,
+  SetPhaseResponse,
 } from "./types";
 
 class ApiError extends Error {
@@ -94,6 +95,17 @@ export function resetPatient(
 ): Promise<ResetPatientResponse> {
   return request(`/v1/demo/reset-patient/${patientId}`, {
     method: "POST",
+  });
+}
+
+export function setPhase(
+  patientId: string,
+  phase: Phase,
+): Promise<SetPhaseResponse> {
+  return request(`/v1/demo/patients/${patientId}/phase`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phase }),
   });
 }
 

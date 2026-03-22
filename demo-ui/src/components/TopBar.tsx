@@ -1,4 +1,4 @@
-import { HeartPulse, Plus, RefreshCw, RotateCcw, Zap } from "lucide-react";
+import { HeartPulse, Plus, RotateCcw, Zap } from "lucide-react";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
@@ -7,6 +7,22 @@ import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { CreatePatientDialog } from "./ui/CreatePatientDialog";
 import { PatientSelector } from "./ui/PatientSelector";
+
+const ALL_PHASES: Phase[] = [
+  "pending",
+  "onboarding",
+  "active",
+  "re_engaging",
+  "dormant",
+];
+
+const PHASE_LABELS: Record<Phase, string> = {
+  pending: "Pending",
+  onboarding: "Onboarding",
+  active: "Active",
+  re_engaging: "Re-engaging",
+  dormant: "Dormant",
+};
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -184,11 +200,36 @@ export function TopBar({
             disabled={!selectedPatientId}
             onClick={() => setConfirmResetOpen(true)}
           />
-          <Button
-            label="Refresh"
-            icon={RefreshCw}
-            onClick={onStateChanged}
-          />
+          <select
+            value={phase}
+            disabled={!selectedPatientId}
+            onChange={(e) => {
+              const target = e.target.value as Phase;
+              if (target === phase) return;
+              void (async () => {
+                try {
+                  await api.setPhase(selectedPatientId, target);
+                  showStatus(
+                    `Phase changed: ${PHASE_LABELS[phase]} → ${PHASE_LABELS[target]}`,
+                    "success",
+                  );
+                  onStateChanged();
+                } catch (err) {
+                  showStatus(
+                    `Set phase failed: ${errorMessage(err)}`,
+                    "error",
+                  );
+                }
+              })();
+            }}
+            className="h-8 rounded-md border border-border-primary bg-bg-card px-2 text-xs font-medium text-text-primary"
+          >
+            {ALL_PHASES.map((p) => (
+              <option key={p} value={p}>
+                {PHASE_LABELS[p]}
+              </option>
+            ))}
+          </select>
         </div>
       </header>
 

@@ -98,6 +98,12 @@ export interface ResetPatientResponse {
   deleted_outbox: number;
 }
 
+export interface SetPhaseResponse {
+  patient_id: string;
+  previous_phase: Phase;
+  phase: Phase;
+}
+
 // --- Chat Messages ---
 
 export interface ChatMessage {

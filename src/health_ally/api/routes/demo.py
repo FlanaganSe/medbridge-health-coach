@@ -16,6 +16,7 @@ from langchain_core.messages import BaseMessage  # noqa: TC002
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
+from health_ally.domain.phases import PatientPhase
 from health_ally.persistence.locking import patient_advisory_lock
 from health_ally.persistence.models import (
     AuditEvent,
@@ -70,6 +71,16 @@ class DemoPatientListResponse(BaseModel):
 class DeletePatientResponse(BaseModel):
     patient_id: str
     deleted: bool
+
+
+class SetPhaseRequest(BaseModel):
+    phase: str
+
+
+class SetPhaseResponse(BaseModel):
+    patient_id: str
+    previous_phase: str
+    phase: str
 
 
 class RunCheckinResponse(BaseModel):
@@ -431,6 +442,48 @@ async def reset_patient(
         deleted_goals=goals_result.rowcount,  # type: ignore[union-attr]
         deleted_jobs=jobs_result.rowcount,  # type: ignore[union-attr]
         deleted_outbox=outbox_result.rowcount,  # type: ignore[union-attr]
+    )
+
+
+@router.put(
+    "/patients/{patient_id}/phase",
+    response_model=SetPhaseResponse,
+)
+async def set_phase(
+    request: Request,
+    patient_id: str,
+    body: SetPhaseRequest,
+) -> SetPhaseResponse:
+    """Force-set a patient's phase. Demo-only — bypasses the phase machine."""
+    session_factory = request.app.state.session_factory
+
+    try:
+        pid = uuid.UUID(patient_id)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid patient_id format") from err
+
+    try:
+        target_phase = PatientPhase(body.phase)
+    except ValueError as err:
+        valid = [p.value for p in PatientPhase]
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid phase '{body.phase}'. Valid phases: {valid}",
+        ) from err
+
+    async with session_factory() as session, session.begin():
+        patient = await session.get(Patient, pid)
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        previous_phase = patient.phase
+        patient.phase = target_phase.value
+        await session.flush()
+
+    return SetPhaseResponse(
+        patient_id=str(pid),
+        previous_phase=previous_phase,
+        phase=target_phase.value,
     )
 
 
