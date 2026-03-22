@@ -21,6 +21,7 @@ dependencies = [
     "stamina>=25.0",
     "tzdata>=2024.1",
     "aiosqlite>=0.20",
+    "langchain>=0.3",
     "langfuse>=3.0,<5",
 ]
 
