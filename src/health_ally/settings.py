@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     max_tokens: int = 1024
     fallback_phi_approved: bool = False
 
+    # --- Observability ---
+    langfuse_enabled: bool = False
+
     # --- Scheduling ---
     quiet_hours_start: int = Field(default=21, ge=0, le=23)
     quiet_hours_end: int = Field(default=8, ge=0, le=23)

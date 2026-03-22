@@ -10,6 +10,7 @@ OnboardingTimeoutHandler performs a pure lifecycle transition (no graph).
 # pyright: reportUnknownParameterType=false
 # pyright: reportUnknownArgumentType=false
 # pyright: reportAttributeAccessIssue=false
+# pyright: reportArgumentType=false
 
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from health_ally.domain.phase_machine import transition
 from health_ally.domain.phases import PatientPhase
+from health_ally.observability.langfuse import langfuse_config
 from health_ally.persistence.locking import patient_advisory_lock
 from health_ally.persistence.models import (
     AuditEvent,
@@ -92,9 +94,12 @@ class FollowupJobHandler:
         self,
         graph: CompiledStateGraph,
         ctx_factory: ContextFactory,
+        *,
+        langfuse_enabled: bool = False,
     ) -> None:
         self._graph = graph
         self._ctx_factory = ctx_factory
+        self._langfuse_enabled = langfuse_enabled
 
     async def handle(
         self,
@@ -107,6 +112,12 @@ class FollowupJobHandler:
         thread_id = f"patient-{patient_id}"
 
         ctx = self._ctx_factory(session_factory, engine)
+        lf = langfuse_config(
+            enabled=self._langfuse_enabled,
+            user_id=patient_id,
+            session_id=thread_id,
+            tags=["scheduler", job.job_type],
+        )
 
         async with patient_advisory_lock(engine, patient_id):
             await self._graph.ainvoke(
@@ -121,7 +132,8 @@ class FollowupJobHandler:
                     "configurable": {
                         "ctx": ctx,
                         "thread_id": thread_id,
-                    }
+                    },
+                    **lf,
                 },
             )
 

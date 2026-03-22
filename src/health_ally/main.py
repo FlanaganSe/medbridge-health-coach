@@ -89,6 +89,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await langgraph_pool.close()
         await logger.ainfo("langgraph_pool_closed")
 
+    from health_ally.observability.langfuse import langfuse_shutdown
+
+    langfuse_shutdown()
     await engine.dispose()
     await logger.ainfo("app_shutdown")
 
@@ -168,7 +171,9 @@ async def _run_background_workers(
         model_gateway=model_gateway,
     )
 
-    followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
+    followup_handler = FollowupJobHandler(
+        graph=graph, ctx_factory=ctx_factory, langfuse_enabled=settings.langfuse_enabled
+    )
     timeout_handler = OnboardingTimeoutHandler()
     reminder_handler = ReminderJobHandler()
     dispatcher = JobDispatcher(
