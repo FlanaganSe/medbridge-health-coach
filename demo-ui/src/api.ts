@@ -27,7 +27,14 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     const text = await res.text();
-    throw new ApiError(res.status, text);
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { detail?: string };
+      if (json.detail) message = json.detail;
+    } catch {
+      // not JSON — use raw text
+    }
+    throw new ApiError(res.status, message);
   }
   return res.json() as Promise<T>;
 }
@@ -182,7 +189,14 @@ export async function sendChatMessage(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new ApiError(res.status, text);
+    let message = text;
+    try {
+      const json = JSON.parse(text) as { detail?: string };
+      if (json.detail) message = json.detail;
+    } catch {
+      // not JSON — use raw text
+    }
+    throw new ApiError(res.status, message);
   }
   return res;
 }

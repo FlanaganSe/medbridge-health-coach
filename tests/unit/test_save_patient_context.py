@@ -61,9 +61,12 @@ def _make_config(mock_patient: MagicMock) -> dict:  # type: ignore[type-arg]
     mock_session = make_mock_session(mock_patient)
     sf = MagicMock(return_value=mock_session)
 
+    mock_engine = MagicMock()
+    mock_engine.url = "sqlite://"
+
     ctx = CoachContext(
         session_factory=sf,  # type: ignore[arg-type]
-        engine=MagicMock(),  # type: ignore[arg-type]
+        engine=mock_engine,  # type: ignore[arg-type]
         consent_service=FakeConsentService(logged_in=True, consented=True),
         settings=MagicMock(),  # type: ignore[arg-type]
         coach_config=CoachConfig(),

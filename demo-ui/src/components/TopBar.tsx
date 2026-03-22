@@ -126,7 +126,7 @@ export function TopBar({
   }, [confirmDeleteId, onPatientDeleted, showStatus]);
 
   const checkinDisabled =
-    phase === "pending" || phase === "onboarding" || !selectedPatientId;
+    phase === "pending" || phase === "onboarding" || phase === "dormant" || !selectedPatientId;
 
   return (
     <>
@@ -169,7 +169,9 @@ export function TopBar({
             disabled={checkinDisabled}
             title={
               checkinDisabled
-                ? "Complete onboarding first (confirm a goal)"
+                ? phase === "dormant"
+                  ? "Patient is dormant — reset to run a check-in"
+                  : "Complete onboarding first (confirm a goal)"
                 : undefined
             }
             onClick={handleCheckin}

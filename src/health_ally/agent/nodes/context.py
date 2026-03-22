@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.state import PatientState  # noqa: TC001
@@ -26,7 +27,9 @@ from health_ally.persistence.models import (
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
+    from sqlalchemy.ext.asyncio import AsyncSession
 
+    from health_ally.agent.context import CoachContext
     from health_ally.agent.state import PendingEffects
 
 logger = structlog.stdlib.get_logger()
@@ -40,6 +43,38 @@ EMPTY_EFFECTS: PendingEffects = {
     "outbox_entries": [],
     "audit_events": [],
 }
+
+
+async def _upsert_outbox(
+    session: AsyncSession,
+    ctx: CoachContext,
+    *,
+    tenant_id: str,
+    patient_id: uuid.UUID,
+    delivery_key: str,
+    message_type: str,
+    priority: int,
+    channel: str,
+    payload: dict[str, object] | None,
+) -> None:
+    """Insert an outbox entry, silently skipping if delivery_key already exists."""
+    values = {
+        "tenant_id": tenant_id,
+        "patient_id": patient_id,
+        "delivery_key": delivery_key,
+        "message_type": message_type,
+        "priority": priority,
+        "channel": channel,
+        "payload": payload,
+        "status": "pending",
+    }
+    if "sqlite" in str(ctx.engine.url):
+        session.add(OutboxEntry(**values))
+    else:
+        stmt = pg_insert(OutboxEntry).values(**values).on_conflict_do_nothing(
+            index_elements=["delivery_key"],
+        )
+        await session.execute(stmt)
 
 
 async def load_patient_context(
@@ -200,35 +235,33 @@ async def save_patient_context(
                 )
             )
             # Alert delivery via outbox (clinician alerts skip consent re-check)
-            session.add(
-                OutboxEntry(
-                    tenant_id=tenant_id,
-                    patient_id=pid,
-                    delivery_key=idempotency_key,
-                    message_type="clinician_alert",
-                    priority=1 if alert_data.get("priority") == "urgent" else 0,
-                    channel="default",
-                    payload={
-                        "reason": str(alert_data.get("reason", "")),
-                        "priority": str(alert_data.get("priority", "routine")),
-                    },
-                    status="pending",
-                )
+            await _upsert_outbox(
+                session,
+                ctx,
+                tenant_id=tenant_id,
+                patient_id=pid,
+                delivery_key=idempotency_key,
+                message_type="clinician_alert",
+                priority=1 if alert_data.get("priority") == "urgent" else 0,
+                channel="default",
+                payload={
+                    "reason": str(alert_data.get("reason", "")),
+                    "priority": str(alert_data.get("priority", "routine")),
+                },
             )
 
         # Write outbox entries
         for entry in effects.get("outbox_entries", []):
-            session.add(
-                OutboxEntry(
-                    tenant_id=tenant_id,
-                    patient_id=pid,
-                    delivery_key=str(entry.get("delivery_key", "")),
-                    message_type=str(entry.get("message_type", "patient_message")),
-                    priority=int(entry.get("priority", 0)),  # type: ignore[arg-type]
-                    channel=str(entry.get("channel", "default")),
-                    payload=entry.get("payload"),  # type: ignore[arg-type]
-                    status="pending",
-                )
+            await _upsert_outbox(
+                session,
+                ctx,
+                tenant_id=tenant_id,
+                patient_id=pid,
+                delivery_key=str(entry.get("delivery_key", "")),
+                message_type=str(entry.get("message_type", "patient_message")),
+                priority=int(entry.get("priority", 0)),  # type: ignore[arg-type]
+                channel=str(entry.get("channel", "default")),
+                payload=entry.get("payload"),  # type: ignore[arg-type]
             )
 
         # Write scheduled jobs
@@ -262,17 +295,16 @@ async def save_patient_context(
         if outbound:
             msg_hash = _hashlib.sha256(str(outbound).encode()).hexdigest()[:16]
             delivery_key = f"{patient_id}:msg:{msg_hash}"
-            session.add(
-                OutboxEntry(
-                    tenant_id=tenant_id,
-                    patient_id=pid,
-                    delivery_key=delivery_key,
-                    message_type="patient_message",
-                    priority=0,
-                    channel="default",
-                    payload={"message": str(outbound)},
-                    status="pending",
-                )
+            await _upsert_outbox(
+                session,
+                ctx,
+                tenant_id=tenant_id,
+                patient_id=pid,
+                delivery_key=delivery_key,
+                message_type="patient_message",
+                priority=0,
+                channel="default",
+                payload={"message": str(outbound)},
             )
             has_outbound = True
 
