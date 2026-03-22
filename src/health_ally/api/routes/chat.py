@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
 from health_ally.api.dependencies import AuthContext, get_auth_context
+from health_ally.observability.langfuse import langfuse_config
 from health_ally.persistence.locking import patient_advisory_lock
 
 if TYPE_CHECKING:
@@ -50,6 +51,11 @@ async def chat(
     thread_id = f"patient-{auth.patient_id}"
 
     async def event_stream() -> AsyncGenerator[str, None]:
+        lf = langfuse_config(
+            enabled=request.app.state.settings.langfuse_enabled,
+            user_id=auth.patient_id,
+            session_id=thread_id,
+        )
         try:
             async with patient_advisory_lock(engine, auth.patient_id):
                 async for _stream_type, event_data in graph.astream(
@@ -63,7 +69,8 @@ async def chat(
                         "configurable": {
                             "ctx": ctx,
                             "thread_id": thread_id,
-                        }
+                        },
+                        **lf,
                     },
                     stream_mode=["updates", "custom"],
                 ):

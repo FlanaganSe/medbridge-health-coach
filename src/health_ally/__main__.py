@@ -120,7 +120,9 @@ async def _run_worker() -> None:
         model_gateway=model_gateway,
     )
 
-    followup_handler = FollowupJobHandler(graph=graph, ctx_factory=ctx_factory)
+    followup_handler = FollowupJobHandler(
+        graph=graph, ctx_factory=ctx_factory, langfuse_enabled=settings.langfuse_enabled
+    )
     timeout_handler = OnboardingTimeoutHandler()
     reminder_handler = ReminderJobHandler()
     dispatcher = JobDispatcher(
@@ -160,6 +162,9 @@ async def _run_worker() -> None:
         scheduler.shutdown_event.set()
         delivery.shutdown_event.set()
     finally:
+        from health_ally.observability.langfuse import langfuse_shutdown
+
+        langfuse_shutdown()
         if langgraph_pool is not None:
             await langgraph_pool.close()
         await engine.dispose()

@@ -17,7 +17,7 @@ def langfuse_config(
 ) -> dict[str, Any]:
     """Build config dict entries for Langfuse tracing.
 
-    Returns {"callbacks": [...], "metadata": {...}} when enabled,
+    Returns {"callbacks": [...], "metadata": {...}, "tags": [...]} when enabled,
     empty dict when disabled or langfuse not installed.
     Creates a fresh CallbackHandler per call for async isolation.
     """
@@ -34,9 +34,10 @@ def langfuse_config(
         "langfuse_user_id": user_id,
         "langfuse_session_id": session_id,
     }
+    result: dict[str, Any] = {"callbacks": [handler], "metadata": metadata}
     if tags:
-        metadata["langfuse_tags"] = tags
-    return {"callbacks": [handler], "metadata": metadata}
+        result["tags"] = tags
+    return result
 
 
 def langfuse_shutdown() -> None:
