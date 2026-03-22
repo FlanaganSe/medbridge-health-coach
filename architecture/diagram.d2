@@ -1,0 +1,46 @@
+direction: right
+
+patient: Patient { shape: person }
+medbridge: MedBridge Go { shape: cloud }
+
+backend: Health Ally Service {
+  api: FastAPI Server
+  graph: LangGraph Agent
+  scheduler: Scheduler Worker
+  delivery: Delivery Worker
+
+  api -> graph: Invoke graph
+  scheduler -> graph: Invoke graph
+}
+
+claude: Claude (Anthropic) { shape: cloud }
+postgres: PostgreSQL { shape: cylinder }
+langfuse: Langfuse { shape: cloud }
+demo: Demo UI
+
+notifications: Notification Channel { shape: queue }
+alerts: Clinician Alert Channel { shape: queue }
+
+# Patient flow
+patient -> medbridge: HTTPS
+medbridge -> backend.api: Webhooks (HMAC)
+demo -> backend.api: HTTP / SSE
+
+# Consent verification
+backend.graph -> medbridge: Consent check (REST)
+
+# LLM calls
+backend.graph -> claude: LLM coaching + safety classification
+
+# Database
+backend.api -> postgres: SQL (async)
+backend.graph -> postgres: Checkpoints
+backend.scheduler -> postgres: Poll scheduled jobs
+backend.delivery -> postgres: Poll outbox
+
+# Delivery
+backend.delivery -> notifications: Patient messages
+backend.delivery -> alerts: Clinician escalations
+
+# Observability
+backend.graph -> langfuse: Traces (optional)
