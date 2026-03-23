@@ -11,7 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from health_ally.agent.context import CoachContext
 from health_ally.agent.graph import compile_graph
 from health_ally.domain.consent import FakeConsentService
-from health_ally.domain.safety import CLINICAL_REDIRECT_MESSAGE, CRISIS_RESPONSE_MESSAGE
+from health_ally.domain.safety import CRISIS_RESPONSE_MESSAGE
 from health_ally.domain.safety_types import (
     ClassifierOutput,
     CrisisLevel,
