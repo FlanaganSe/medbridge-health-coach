@@ -21,26 +21,15 @@ def test_safety_route_safe() -> None:
     assert safety_route(state) == "save_patient_context"
 
 
-def test_safety_route_clinical_boundary_first_attempt() -> None:
-    """CLINICAL_BOUNDARY on first attempt routes to retry_generation."""
+def test_safety_route_clinical_boundary_is_advisory() -> None:
+    """CLINICAL_BOUNDARY is advisory — routes to save (no retry/fallback)."""
     state: PatientState = {
         "patient_id": "p1",
         "tenant_id": "t1",
         "safety_decision": SafetyDecision.CLINICAL_BOUNDARY.value,
         "safety_retry_count": 0,
     }
-    assert safety_route(state) == "retry_generation"
-
-
-def test_safety_route_clinical_boundary_after_retry() -> None:
-    """CLINICAL_BOUNDARY after retry routes to fallback_response."""
-    state: PatientState = {
-        "patient_id": "p1",
-        "tenant_id": "t1",
-        "safety_decision": SafetyDecision.CLINICAL_BOUNDARY.value,
-        "safety_retry_count": 1,
-    }
-    assert safety_route(state) == "fallback_response"
+    assert safety_route(state) == "save_patient_context"
 
 
 def test_safety_route_crisis_no_retry() -> None:

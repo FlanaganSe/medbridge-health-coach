@@ -103,9 +103,9 @@ async def test_safety_blocks_clinical_content() -> None:
         config={"configurable": {"ctx": ctx, "thread_id": str(uuid.uuid4())}},
     )
 
-    # Should get the clinical redirect fallback message
-    assert result.get("outbound_message") == CLINICAL_REDIRECT_MESSAGE
-    assert result.get("safety_decision") == "fallback"
+    # Clinical boundary is advisory — original message preserved, decision logged
+    assert result.get("outbound_message") == "You should take ibuprofen for your knee pain."
+    assert result.get("safety_decision") == "clinical_boundary"
 
 
 async def test_crisis_triggers_988_response() -> None:

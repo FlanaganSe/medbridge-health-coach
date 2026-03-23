@@ -46,8 +46,8 @@ async def test_retry_increments_safety_retry_count() -> None:
     assert result["safety_retry_count"] == 2
 
 
-async def test_retry_produces_draft_message() -> None:
-    """Retry generation with successful LLM call sets draft_message."""
+async def test_retry_produces_outbound_message() -> None:
+    """Retry generation with successful LLM call sets outbound_message."""
     state = _make_state()
     config = _make_config(
         model_gateway=FakeModelGateway(
@@ -57,12 +57,12 @@ async def test_retry_produces_draft_message() -> None:
 
     result = await retry_generation(state, config)
 
-    assert result["draft_message"] == "Great, let's focus on your exercise goals!"
+    assert result["outbound_message"] == "Great, let's focus on your exercise goals!"
     assert result["safety_retry_count"] == 1
 
 
 async def test_retry_on_llm_error_returns_no_message() -> None:
-    """Retry generation when LLM raises returns None draft_message."""
+    """Retry generation when LLM raises returns None outbound_message."""
     state = _make_state()
     # Create a gateway that will raise on ainvoke
     gateway = FakeModelGateway(responses=["unused"])
@@ -87,5 +87,5 @@ async def test_retry_on_llm_error_returns_no_message() -> None:
 
     result = await retry_generation(state, config)
 
-    assert result["draft_message"] is None
+    assert result["outbound_message"] is None
     assert result["safety_retry_count"] == 1

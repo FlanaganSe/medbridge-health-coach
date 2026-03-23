@@ -32,8 +32,8 @@ async def safety_gate(
     Uses a lightweight classifier model (Haiku) to evaluate the
     agent's response. Accumulates safety decision in pending_effects.
     """
-    draft = state.get("draft_message", "")
-    if not draft:
+    outbound = state.get("outbound_message", "")
+    if not outbound:
         # No message to classify — pass through as safe
         return {"safety_decision": SafetyDecision.SAFE.value}
 
@@ -51,10 +51,10 @@ async def safety_gate(
     if patient_message:
         classify_input = (
             f"Patient's message:\n{patient_message}\n\n"
-            f"Coach's response (classify this):\n\n{draft}"
+            f"Coach's response (classify this):\n\n{outbound}"
         )
     else:
-        classify_input = f"Classify this outbound message:\n\n{draft}"
+        classify_input = f"Classify this outbound message:\n\n{outbound}"
 
     classifier_model = ctx.model_gateway.get_chat_model("classifier")
     structured_model = classifier_model.with_structured_output(ClassifierOutput)
@@ -112,15 +112,14 @@ async def safety_gate(
 
 
 def safety_route(state: PatientState) -> str:
-    """Route based on safety decision."""
+    """Route based on safety decision.
+
+    Clinical boundary is advisory — the classification is logged as an
+    audit event but the original message is preserved.  Only crisis and
+    jailbreak hard-block by routing to the fallback response.
+    """
     decision = state.get("safety_decision", "safe")
 
-    if decision == SafetyDecision.SAFE.value:
-        return "save_patient_context"
-    if decision == SafetyDecision.CLINICAL_BOUNDARY.value:
-        retry_count = state.get("safety_retry_count", 0)
-        if retry_count < 1:
-            return "retry_generation"
+    if decision in (SafetyDecision.CRISIS.value, SafetyDecision.JAILBREAK.value):
         return "fallback_response"
-    # crisis or jailbreak — never retry
-    return "fallback_response"
+    return "save_patient_context"

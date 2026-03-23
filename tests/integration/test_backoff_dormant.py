@@ -123,7 +123,7 @@ async def test_dormant_node_patient_returns() -> None:
     effects = result.get("pending_effects", {})
     assert effects.get("phase_event") == "patient_returned"
     # Now generates a welcome-back message
-    assert result.get("draft_message") is not None
+    assert result.get("outbound_message") is not None
 
 
 @pytest.mark.asyncio

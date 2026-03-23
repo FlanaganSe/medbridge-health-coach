@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
+from langchain_core.messages import AIMessage
+from langgraph.config import get_stream_writer
 
 from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
@@ -55,16 +57,26 @@ async def onboarding_agent(
     messages = list(state.get("messages", []))
 
     try:
-        response = await model_with_tools.ainvoke(
+        writer = get_stream_writer()
+        full_response = None
+        async for chunk in model_with_tools.astream(
             [{"role": "system", "content": system_prompt}, *messages]
-        )
+        ):
+            text = extract_text_content(chunk.content) if chunk.content else ""
+            if text and not getattr(chunk, "tool_call_chunks", None):
+                writer({"type": "token", "content": text})
+            full_response = chunk if full_response is None else full_response + chunk
+        response = full_response if full_response is not None else AIMessage(content="")
     except Exception:
         logger.exception("onboarding_agent_error", patient_id=patient_id)
-        return {"draft_message": None}
+        # Return empty to trigger fallback via safety gate
+        return {
+            "outbound_message": None,
+        }
 
     has_tool_calls = bool(getattr(response, "tool_calls", None))
-    # Tool calls → graph loops through tool_node; defer draft_message
-    # to the final (no-tools) invocation.
+    # Tool calls → graph loops through tool_node; defer outbound_message
+    # to the final (no-tools) invocation so raw tool JSON isn't streamed.
     content = None if has_tool_calls else (extract_text_content(response.content) or None)
 
     logger.info(
@@ -75,5 +87,5 @@ async def onboarding_agent(
 
     return {
         "messages": [response],
-        "draft_message": content,
+        "outbound_message": content,
     }

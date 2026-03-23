@@ -55,7 +55,7 @@ def _crisis_route(state: PatientState) -> str:
 
 def _dormant_route(state: PatientState) -> str:
     """Route dormant_node output: safety_gate if message generated, save if not."""
-    if state.get("draft_message"):
+    if state.get("outbound_message"):
         return "safety_gate"
     return "save_patient_context"
 
