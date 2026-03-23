@@ -26,9 +26,10 @@ export interface AlertItem {
 
 export type SafetyDecision =
   | "safe"
-  | "block"
   | "clinical_boundary"
-  | "crisis";
+  | "crisis"
+  | "jailbreak"
+  | "fallback";
 
 export interface SafetyDecisionItem {
   id: string;

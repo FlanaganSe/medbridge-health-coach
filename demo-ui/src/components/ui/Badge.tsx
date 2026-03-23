@@ -119,13 +119,22 @@ const SAFETY_STYLES: Record<
     text: "text-green",
     Icon: ShieldCheck,
   },
-  block: { bg: "bg-red-light", text: "text-red" },
   clinical_boundary: {
     bg: "bg-red-light",
     text: "text-red",
     Icon: TriangleAlert,
   },
   crisis: {
+    bg: "bg-red-light",
+    text: "text-red",
+    Icon: TriangleAlert,
+  },
+  jailbreak: {
+    bg: "bg-red-light",
+    text: "text-red",
+    Icon: TriangleAlert,
+  },
+  fallback: {
     bg: "bg-red-light",
     text: "text-red",
     Icon: TriangleAlert,

@@ -112,10 +112,12 @@ export function ChatPanel({
     // Add all collected messages (tool calls + assistant response)
     setMessages((prev) => [...prev, ...result.messages]);
 
-    // Show safety toast if relevant
+    // Show safety toast only for hard-blocking decisions.
+    // Clinical boundary is advisory — logged but doesn't replace the message.
     if (
       result.safetyDecision &&
-      result.safetyDecision.decision !== "safe"
+      result.safetyDecision.decision !== "safe" &&
+      result.safetyDecision.decision !== "clinical_boundary"
     ) {
       setSafetyToast(result.safetyDecision);
     }

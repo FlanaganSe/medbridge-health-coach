@@ -9,9 +9,9 @@ interface SafetyToastProps {
 
 const LABELS: Record<string, string> = {
   safe: "Safe",
-  block: "Blocked",
   clinical_boundary: "Clinical Boundary Detected",
   crisis: "Crisis Detected",
+  jailbreak: "Jailbreak Detected",
   fallback: "Fallback Response",
 };
 
