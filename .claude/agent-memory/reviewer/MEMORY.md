@@ -53,6 +53,13 @@
 - Ordering: `snapshot.values["messages"]` is oldest-first (LangGraph `add_messages` reducer always appends). Backend returns `items[:100]` (oldest 100). UI renders in array order (oldest at top). This is correct for a conversation transcript display.
 - Count badge on the Conversation section header shows the full list length (up to 100 from the endpoint), and the overflow text shows `length - 20 more`. Both are accurate.
 
+## Patterns Confirmed in Langfuse Tracing M2
+
+- `RunnableConfig` top-level keys are: `tags`, `metadata`, `callbacks`, `run_name`, `max_concurrency`, `recursion_limit`, `configurable`, `run_id`. Both `callbacks` and `metadata` are correct top-level placement for Langfuse config.
+- `langfuse_config()` stores scheduler tags in `metadata["langfuse_tags"]` (not in `RunnableConfig.tags`). Langfuse reads trace tags from `RunnableConfig.tags` list — the current placement means tags are silently ignored in the Langfuse UI.
+- The `**lf` spread pattern for merging Langfuse config will silently clobber any pre-existing `metadata` key at the same dict level. Safe today (no callers set `metadata` in the base config), but a future-collision footgun.
+- `langfuse_shutdown()` is in the post-`yield` teardown of `lifespan` only — not guarded against startup-time exceptions. Safe today because no traces are pending before `yield`.
+
 ## Known Issues Found in M2
 
 - `FakeConsentService.reason` field in `check()` uses `self.allowed` (a property on the fake) — this is fine, not a bug.
