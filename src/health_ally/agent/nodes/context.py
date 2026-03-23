@@ -122,6 +122,8 @@ async def load_patient_context(
             else None
         ),
         "pending_effects": dict(EMPTY_EFFECTS),
+        "draft_message": None,
+        "outbound_message": None,
     }
 
 
@@ -293,8 +295,9 @@ async def save_patient_context(
                 )
             )
 
-        # Create outbox entry for outbound message (Plan Invariant #2)
-        outbound = state.get("outbound_message")
+        # Determine final outbound message: outbound_message (set by fallback
+        # or pending_node) or draft_message (promoted after safety clearance).
+        outbound = state.get("outbound_message") or state.get("draft_message")
         has_outbound = False
         if outbound:
             msg_hash = _hashlib.sha256(str(outbound).encode()).hexdigest()[:16]
@@ -317,4 +320,7 @@ async def save_patient_context(
             patient.last_outreach_at = datetime.now(UTC)
 
     logger.info("patient_context_saved", patient_id=patient_id)
-    return {"pending_effects": None}
+    # Return outbound_message so the demo UI receives it in the node update
+    # event — this is the first time outbound_message appears in state for
+    # messages that went through the safety gate (draft_message promotion).
+    return {"pending_effects": None, "outbound_message": outbound}

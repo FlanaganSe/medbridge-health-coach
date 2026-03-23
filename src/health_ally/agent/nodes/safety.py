@@ -2,6 +2,7 @@
 
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
 
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
 from health_ally.agent.effects import accumulate_effects
 from health_ally.agent.prompts.safety import SAFETY_CLASSIFIER_PROMPT
@@ -30,13 +32,29 @@ async def safety_gate(
     Uses a lightweight classifier model (Haiku) to evaluate the
     agent's response. Accumulates safety decision in pending_effects.
     """
-    outbound = state.get("outbound_message", "")
-    if not outbound:
+    draft = state.get("draft_message", "")
+    if not draft:
         # No message to classify — pass through as safe
         return {"safety_decision": SafetyDecision.SAFE.value}
 
     ctx = get_coach_context(config)
     patient_id = state["patient_id"]
+
+    # Include the patient's last message so the classifier can evaluate
+    # the response in context (e.g. exercise progress question → coaching answer).
+    patient_message = ""
+    for msg in reversed(state.get("messages", [])):
+        if getattr(msg, "type", None) == "human":
+            patient_message = extract_text_content(msg.content) or ""
+            break
+
+    if patient_message:
+        classify_input = (
+            f"Patient's message:\n{patient_message}\n\n"
+            f"Coach's response (classify this):\n\n{draft}"
+        )
+    else:
+        classify_input = f"Classify this outbound message:\n\n{draft}"
 
     classifier_model = ctx.model_gateway.get_chat_model("classifier")
     structured_model = classifier_model.with_structured_output(ClassifierOutput)
@@ -45,7 +63,7 @@ async def safety_gate(
         result: ClassifierOutput = await structured_model.ainvoke(  # type: ignore[assignment]
             [
                 {"role": "system", "content": SAFETY_CLASSIFIER_PROMPT},
-                {"role": "user", "content": f"Classify this outbound message:\n\n{outbound}"},
+                {"role": "user", "content": classify_input},
             ]
         )
     except Exception:

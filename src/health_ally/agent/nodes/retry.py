@@ -71,6 +71,6 @@ async def retry_generation(
 
     return {
         "safety_retry_count": retry_count,
-        "outbound_message": content if content else None,
+        "draft_message": content if content else None,
         "messages": [AIMessage(content=content)],
     }

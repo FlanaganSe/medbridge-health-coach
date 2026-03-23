@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import structlog
 from langchain_core.messages import AIMessage
-from langgraph.config import get_stream_writer
 
 from health_ally.agent.content import extract_text_content
 from health_ally.agent.context import get_coach_context
@@ -80,29 +79,22 @@ async def active_agent(
     messages = list(state.get("messages", []))
 
     try:
-        writer = get_stream_writer()
-        full_response = None
-        async for chunk in model_with_tools.astream(
+        response = await model_with_tools.ainvoke(
             [{"role": "system", "content": system_prompt}, *messages]
-        ):
-            text = extract_text_content(chunk.content) if chunk.content else ""
-            if text and not getattr(chunk, "tool_call_chunks", None):
-                writer({"type": "token", "content": text})
-            full_response = chunk if full_response is None else full_response + chunk
-        response = full_response if full_response is not None else AIMessage(content="")
+        )
     except Exception:
         logger.exception("active_agent_error", patient_id=patient_id)
-        return {"outbound_message": None}
+        return {"draft_message": None}
 
-    # Tool calls → graph loops through tool_node; defer outbound_message
-    # to the final (no-tools) invocation so raw tool JSON isn't streamed.
+    # Tool calls → graph loops through tool_node; defer draft_message
+    # to the final (no-tools) invocation.
     has_tool_calls = bool(getattr(response, "tool_calls", None))
     content = None if has_tool_calls else (extract_text_content(response.content) or None)
 
     # Accumulate next follow-up job if scheduler-initiated
     result: dict[str, object] = {
         "messages": [response],
-        "outbound_message": content,
+        "draft_message": content,
     }
 
     if invocation_source == "scheduler":
@@ -111,7 +103,6 @@ async def active_agent(
             result["pending_effects"] = effects
 
     return result
-
 
 
 def _handle_unanswered_outreach(state: PatientState) -> dict[str, object]:
@@ -133,7 +124,7 @@ def _handle_unanswered_outreach(state: PatientState) -> dict[str, object]:
     return {
         "unanswered_count": unanswered,
         "pending_effects": effects,
-        "outbound_message": None,
+        "draft_message": None,
         # Empty AIMessage so tools_condition can inspect without error
         "messages": [AIMessage(content="")],
     }

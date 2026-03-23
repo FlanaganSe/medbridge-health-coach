@@ -36,6 +36,7 @@ class PatientState(TypedDict, total=False):
     unanswered_count: int
     safety_decision: str | None
     crisis_detected: bool
+    draft_message: str | None  # Unapproved LLM output; promoted to outbound after safety
     outbound_message: str | None
     delivery_status: str | None
     invocation_source: str | None  # "patient" or "scheduler"

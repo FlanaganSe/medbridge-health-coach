@@ -49,7 +49,7 @@ async def dormant_node(
             logger.exception("dormant_welcome_back_error", patient_id=patient_id)
             # On LLM failure, do NOT transition phase — leave patient in DORMANT
             # so the next message attempt can succeed
-            return {"outbound_message": None}
+            return {"draft_message": None}
 
         # Only accumulate phase transition after successful LLM response
         effects = accumulate_effects(
@@ -71,7 +71,7 @@ async def dormant_node(
 
         return {
             "pending_effects": effects,
-            "outbound_message": content,
+            "draft_message": content,
             "messages": [response],
         }
 
@@ -80,4 +80,4 @@ async def dormant_node(
         patient_id=patient_id,
         invocation_source=invocation_source,
     )
-    return {"outbound_message": None}
+    return {"draft_message": None}
