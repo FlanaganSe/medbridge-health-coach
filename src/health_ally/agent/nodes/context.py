@@ -71,8 +71,12 @@ async def _upsert_outbox(
     if "sqlite" in str(ctx.engine.url):
         session.add(OutboxEntry(**values))
     else:
-        stmt = pg_insert(OutboxEntry).values(**values).on_conflict_do_nothing(
-            index_elements=["delivery_key"],
+        stmt = (
+            pg_insert(OutboxEntry)
+            .values(**values)
+            .on_conflict_do_nothing(
+                index_elements=["delivery_key"],
+            )
         )
         await session.execute(stmt)
 
