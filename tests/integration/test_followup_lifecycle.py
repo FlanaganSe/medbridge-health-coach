@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from langchain_core.messages import HumanMessage
@@ -70,19 +69,12 @@ async def test_active_agent_produces_response() -> None:
     assert result.get("outbound_message") is not None
 
 
-async def test_active_agent_detects_no_response() -> None:
-    """Active agent on scheduler invocation detects unanswered outreach."""
+async def test_active_agent_scheduler_triggers_unanswered() -> None:
+    """Active agent on scheduler invocation always triggers unanswered outreach."""
     patient = _make_active_patient()
-    patient.last_outreach_at = datetime(2026, 3, 8, 10, 0, 0, tzinfo=UTC)
-    patient.last_patient_response_at = None  # Never responded
     patient.unanswered_count = 0
 
-    ctx = _make_ctx(
-        mock_patient=patient,
-        model_gateway=FakeModelGateway(
-            responses=["How are your exercises going?"],
-        ),
-    )
+    ctx = _make_ctx(mock_patient=patient)
     graph = compile_graph(checkpointer=MemorySaver())
 
     result = await graph.ainvoke(

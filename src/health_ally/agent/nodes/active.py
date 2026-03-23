@@ -67,11 +67,9 @@ async def active_agent(
     patient_id = state["patient_id"]
     invocation_source = state.get("invocation_source")
 
-    # Detect no-response on scheduler-initiated invocations
+    # Scheduler-initiated invocations always trigger unanswered-outreach handling
     if invocation_source == "scheduler":
-        no_response = _detect_no_response(state)
-        if no_response:
-            return _handle_unanswered_outreach(state)
+        return _handle_unanswered_outreach(state)
 
     system_prompt = build_active_prompt("check_in")
 
@@ -114,18 +112,6 @@ async def active_agent(
 
     return result
 
-
-def _detect_no_response(state: PatientState) -> bool:
-    """Check if patient hasn't responded since last outreach."""
-    last_outreach = state.get("last_outreach_at")
-    if not last_outreach:
-        return False
-
-    last_response = state.get("last_patient_response_at")
-    if not last_response:
-        return True  # Never responded
-
-    return last_response < last_outreach
 
 
 def _handle_unanswered_outreach(state: PatientState) -> dict[str, object]:
